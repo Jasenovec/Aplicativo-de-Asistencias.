@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'asistencia_list_screen.dart';
 import 'package:intl/intl.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 class SeleccionarGradoSeccionFechaScreen extends StatefulWidget {
   const SeleccionarGradoSeccionFechaScreen({super.key});
@@ -19,6 +20,7 @@ class _SeleccionarGradoSeccionFechaScreenState
   int? gradoSeleccionado;
   int? seccionSeleccionada;
   DateTime? fechaSeleccionada;
+  DateTime focusedDay = DateTime.now();
 
   @override
   void initState() {
@@ -105,24 +107,43 @@ class _SeleccionarGradoSeccionFechaScreenState
               onChanged: (valor) => setState(() => seccionSeleccionada = valor),
             ),
             const SizedBox(height: 16),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.calendar_today),
-              label: Text(
-                fechaSeleccionada != null
-                    ? DateFormat('yyyy-MM-dd').format(fechaSeleccionada!)
-                    : 'Seleccionar Fecha',
+            // Calendario integrado en un Card
+            Card(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
-              onPressed: () async {
-                final DateTime? picked = await showDatePicker(
-                  context: context,
-                  initialDate: DateTime.now(),
-                  firstDate: DateTime(2023),
-                  lastDate: DateTime(2030),
-                );
-                if (picked != null) {
-                  setState(() => fechaSeleccionada = picked);
-                }
-              },
+              elevation: 4,
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: TableCalendar(
+                  locale: 'es_ES',
+                  firstDay: DateTime(2023, 1, 1),
+                  lastDay: DateTime(2030, 12, 31),
+                  focusedDay: focusedDay,
+                  selectedDayPredicate:
+                      (day) => isSameDay(fechaSeleccionada, day),
+                  onDaySelected: (selectedDay, focusDay) {
+                    setState(() {
+                      fechaSeleccionada = selectedDay;
+                      focusedDay = focusDay;
+                    });
+                  },
+                  calendarStyle: const CalendarStyle(
+                    todayDecoration: BoxDecoration(
+                      color: Colors.blueAccent,
+                      shape: BoxShape.circle,
+                    ),
+                    selectedDecoration: BoxDecoration(
+                      color: Colors.indigo,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  headerStyle: const HeaderStyle(
+                    formatButtonVisible: false,
+                    titleCentered: true,
+                  ),
+                ),
+              ),
             ),
             const SizedBox(height: 30),
             ElevatedButton.icon(
