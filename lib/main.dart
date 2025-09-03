@@ -18,19 +18,6 @@ void main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => AsistenciaViewModel(estudianteVM: null),
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'Asistencia Escolar',
-        initialRoute: '/',
-        routes: {'/': (context) => const HomeScreen()},
-      ),
-    );
-  }
-
   // @override
   // Widget build(BuildContext context) {
   //   return ChangeNotifierProvider(
@@ -39,16 +26,29 @@ class MyApp extends StatelessWidget {
   //       debugShowCheckedModeBanner: false,
   //       title: 'Asistencia Escolar',
   //       initialRoute: '/',
-  //       routes: {
-  //         '/': (context) => const HomeScreen(),
-  //         '/seleccionar':
-  //             (context) =>
-  //                 const SeleccionarGradoSeccionScreen(), // para registrar
-  //         '/ver_asistencias':
-  //             (context) =>
-  //                 const SeleccionarGradoSeccionFechaScreen(), // para ver filtradas
-  //       },
+  //       routes: {'/': (context) => const HomeScreen()},
   //     ),
   //   );
   // }
+
+  @override
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => AsistenciaViewModel(estudianteVM: null),
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Asistencia Escolar',
+        initialRoute: '/',
+        routes: {
+          '/': (context) => const HomeScreen(),
+          '/seleccionar':
+              (context) =>
+                  const SeleccionarGradoSeccionScreen(), // para registrar
+          '/ver_asistencias':
+              (context) =>
+                  const SeleccionarGradoSeccionFechaScreen(), // para ver filtradas
+        },
+      ),
+    );
+  }
 }

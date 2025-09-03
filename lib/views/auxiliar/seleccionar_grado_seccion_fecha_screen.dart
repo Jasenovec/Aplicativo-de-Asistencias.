@@ -30,9 +30,7 @@ class _SeleccionarGradoSeccionFechaScreenState
   }
 
   Future<void> cargarGrados() async {
-    final response = await Dio().get(
-      'http://192.168.10.79:3000/parametros/grados',
-    );
+    final response = await Dio().get('http://10.0.2.2:3000/parametros/grados');
     setState(() {
       grados =
           List<Map<String, dynamic>>.from(
@@ -43,7 +41,7 @@ class _SeleccionarGradoSeccionFechaScreenState
 
   Future<void> cargarSecciones() async {
     final response = await Dio().get(
-      'http://192.168.10.79:3000/parametros/secciones',
+      'http://10.0.2.2:3000/parametros/secciones',
     );
     setState(() {
       secciones = List<Map<String, dynamic>>.from(response.data);
