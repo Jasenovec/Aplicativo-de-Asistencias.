@@ -1,6 +1,13 @@
+import 'package:asistencia_app/models/grado.dart';
+import 'package:asistencia_app/models/seccion.dart';
+import 'package:asistencia_app/services/parametros_service.dart';
 import 'package:flutter/material.dart';
-import 'package:dio/dio.dart';
 import 'asistencia_screen.dart';
+
+const _primary = Color(0xFF1E88E5); // Azul 600
+const _primaryDark = Color(0xFF1976D2); // aZUL 700
+const _outline = Color(0xFFE5E7EB); // Gris 200
+const _muted = Color(0xFF6B7280); // Gris 500
 
 class SeleccionarGradoSeccionScreen extends StatefulWidget {
   const SeleccionarGradoSeccionScreen({super.key});
@@ -12,8 +19,10 @@ class SeleccionarGradoSeccionScreen extends StatefulWidget {
 
 class _SeleccionarGradoSeccionScreenState
     extends State<SeleccionarGradoSeccionScreen> {
-  List<int> grados = [];
-  List<Map<String, dynamic>> secciones = [];
+  final _svc = ParametrosService();
+
+  List<Grado> grados = [];
+  List<Seccion> secciones = [];
 
   int? gradoSeleccionado;
   int? seccionSeleccionada;
@@ -30,32 +39,27 @@ class _SeleccionarGradoSeccionScreenState
 
   Future<void> cargarGrados() async {
     try {
-      final response = await Dio().get(
-        'http://10.0.2.2:3000/parametros/grados',
-      );
+      final res = await _svc.getGrados();
       setState(() {
-        grados =
-            List<Map<String, dynamic>>.from(
-              response.data,
-            ).map((e) => e['NRO_GRADO'] as int).toList();
+        grados = res;
         cargandoGrados = false;
       });
     } catch (e) {
       mostrarError('Error cargando grados');
+      setState(() => cargandoGrados = false);
     }
   }
 
   Future<void> cargarSecciones() async {
     try {
-      final response = await Dio().get(
-        'http://10.0.2.2:3000/parametros/secciones',
-      );
+      final res = await _svc.getSecciones();
       setState(() {
-        secciones = List<Map<String, dynamic>>.from(response.data);
+        secciones = res;
         cargandoSecciones = false;
       });
     } catch (e) {
       mostrarError('Error cargando secciones');
+      setState(() => cargandoSecciones = false);
     }
   }
 
@@ -84,98 +88,164 @@ class _SeleccionarGradoSeccionScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Seleccionar Grado y Sección'),
+    final base = Theme.of(context);
+    final localTheme = base.copyWith(
+      scaffoldBackgroundColor: Colors.white,
+      appBarTheme: base.appBarTheme.copyWith(
+        backgroundColor: Colors.white,
+        foregroundColor: _primaryDark,
+        elevation: 0,
         centerTitle: true,
+        titleTextStyle: base.textTheme.titleLarge?.copyWith(
+          color: _primaryDark,
+          fontWeight: FontWeight.w700,
+        ),
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Card(
-            elevation: 6,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  cargandoGrados
-                      ? const CircularProgressIndicator()
-                      : DropdownButtonFormField<int>(
-                        value: gradoSeleccionado,
-                        decoration: const InputDecoration(
-                          labelText: 'Seleccionar Grado',
-                          border: OutlineInputBorder(),
-                        ),
-                        items:
-                            grados.map((g) {
-                              return DropdownMenuItem<int>(
-                                value: g,
-                                child: Text(nombreGrado(g)),
-                              );
-                            }).toList(),
-                        onChanged: (valor) {
-                          setState(() {
-                            gradoSeleccionado = valor;
-                          });
-                        },
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: Colors.white,
+        labelStyle: const TextStyle(color: _muted),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _outline, width: 1.2),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _primary, width: 1.6),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _primary,
+          foregroundColor: Colors.white,
+          elevation: 2,
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 18),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      ),
+    );
+
+    return Theme(
+      data: localTheme,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Registrar asistencia')),
+        body: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20.0),
+            child: Card(
+              color: Colors.white,
+              elevation: 8,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: const BorderSide(color: Color(0xFFF3F4F6)), // Gris 100
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'Seleccione un grado y una sección',
+                      style: TextStyle(
+                        color: _muted,
+                        fontWeight: FontWeight.w500,
                       ),
-                  const SizedBox(height: 20),
-                  cargandoSecciones
-                      ? const CircularProgressIndicator()
-                      : DropdownButtonFormField<int>(
-                        value: seccionSeleccionada,
-                        decoration: const InputDecoration(
-                          labelText: 'Seleccionar Sección',
-                          border: OutlineInputBorder(),
-                        ),
-                        items:
-                            secciones.map((s) {
-                              return DropdownMenuItem<int>(
-                                value: s['ID_SECCION'],
-                                child: Text(s['SECCION']),
-                              );
-                            }).toList(),
-                        onChanged: (valor) {
-                          setState(() {
-                            seccionSeleccionada = valor;
-                          });
-                        },
-                      ),
-                  const SizedBox(height: 30),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.check),
-                      label: const Text('Continuar'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      onPressed:
-                          (gradoSeleccionado != null &&
-                                  seccionSeleccionada != null)
-                              ? () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (context) => AsistenciaScreen(
-                                          grado: gradoSeleccionado!,
-                                          seccion: seccionSeleccionada!,
-                                        ),
-                                  ),
-                                );
-                              }
-                              : null,
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+
+                    // Grado
+                    cargandoGrados
+                        ? const Center(
+                          child: CircularProgressIndicator(color: _primary),
+                        )
+                        : DropdownButtonFormField<int>(
+                          value: gradoSeleccionado,
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                            labelText: 'Seleccionar grado',
+                          ),
+                          items:
+                              grados
+                                  .map(
+                                    (g) => DropdownMenuItem<int>(
+                                      value: g.nroGrado,
+                                      child: Text(nombreGrado(g.nroGrado)),
+                                    ),
+                                  )
+                                  .toList(),
+                          onChanged: (valor) {
+                            setState(() {
+                              gradoSeleccionado = valor;
+                              seccionSeleccionada = null;
+                            });
+                          },
+                        ),
+
+                    const SizedBox(height: 16),
+
+                    // Sección
+                    cargandoSecciones
+                        ? const Center(
+                          child: CircularProgressIndicator(color: _primary),
+                        )
+                        : DropdownButtonFormField<int>(
+                          value: seccionSeleccionada,
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                            labelText: 'Seleccionar sección',
+                          ),
+                          items:
+                              secciones
+                                  .map(
+                                    (s) => DropdownMenuItem<int>(
+                                      value: s.idSeccion,
+                                      child: Text(s.seccion),
+                                    ),
+                                  )
+                                  .toList(),
+                          onChanged:
+                              (valor) =>
+                                  setState(() => seccionSeleccionada = valor),
+                        ),
+
+                    const SizedBox(height: 22),
+
+                    // Botón Buscar centrado
+                    Align(
+                      alignment: Alignment.center,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minWidth: 140),
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.search_rounded),
+                          label: const Text('Buscar'),
+                          onPressed:
+                              (gradoSeleccionado != null &&
+                                      seccionSeleccionada != null)
+                                  ? () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (_) => AsistenciaScreen(
+                                              grado: gradoSeleccionado!,
+                                              seccion: seccionSeleccionada!,
+                                            ),
+                                      ),
+                                    );
+                                  }
+                                  : null,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

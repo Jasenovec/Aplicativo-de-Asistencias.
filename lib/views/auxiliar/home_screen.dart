@@ -15,12 +15,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
+  late Timer _clockTimer; // 👈 agrega esto
 
   @override
   void initState() {
     super.initState();
     _updateTime();
-    Timer.periodic(const Duration(seconds: 1), (timer) => _updateTime());
+    _clockTimer = Timer.periodic(
+      const Duration(seconds: 1),
+      (timer) => _updateTime(),
+    ); // 👈 guarda el timer
 
     // Animación de entrada
     _fadeController = AnimationController(
@@ -44,8 +48,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     });
   }
 
+  void _logout() {
+    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+  }
+
   @override
   void dispose() {
+    _clockTimer.cancel(); // 👈 importante
     _fadeController.dispose();
     super.dispose();
   }
@@ -168,6 +177,28 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               ),
                         ),
                         const SizedBox(height: 40),
+                        // 🔴 Botón Cerrar sesión (abajo)
+                        SizedBox(
+                          width: 300,
+                          child: OutlinedButton.icon(
+                            onPressed: _logout,
+                            icon: const Icon(Icons.logout),
+                            label: const Text("Cerrar sesión"),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              side: const BorderSide(color: Colors.white70),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(50),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              textStyle: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 30),
                       ],
                     ),
                   ),

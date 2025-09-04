@@ -1,10 +1,13 @@
 class Seccion {
-  final int id;
+  final int idSeccion;
   final String seccion;
 
-  Seccion({required this.id, required this.seccion});
+  Seccion({required this.idSeccion, required this.seccion});
 
   factory Seccion.fromJson(Map<String, dynamic> json) {
-    return Seccion(id: json['ID_SECCION'], seccion: json['SECCION']);
+    return Seccion(
+      idSeccion: (json['id_seccion'] ?? json['ID_SECCION']) as int,
+      seccion: (json['seccion'] ?? json['SECCION']) as String,
+    );
   }
 }
