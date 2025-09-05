@@ -17,9 +17,11 @@ import 'views/auxiliar/seleccionar_grado_seccion_fecha_screen.dart';
 
 import 'package:intl/date_symbol_data_local.dart';
 
+import 'theme/app_theme.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting('es_PE', null); // o 'es_PE' si prefieres
+  await initializeDateFormatting('es_PE', null);
 
   ApiConfig.attachAuthInterceptor(
     getToken: AuthStore.getToken,
@@ -52,6 +54,16 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Asistencia Escolar',
+
+        // 👇👇 AQUI VA EL THEME
+        theme: AppTheme.light(), // <- usa tu ThemeData global
+        // (opcional) si luego haces un dark:
+        // darkTheme: AppTheme.dark(),
+        // themeMode: ThemeMode.light,
+
+        // 👇 recomendado porque usas NavigationService en el interceptor
+        navigatorKey: NavigationService.navigatorKey,
+
         initialRoute: '/splash',
         routes: {
           '/splash': (context) => const SplashScreen(),
@@ -65,6 +77,7 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
 
 
 

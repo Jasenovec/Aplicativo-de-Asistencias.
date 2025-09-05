@@ -134,7 +134,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
                   // Descripción
                   Container(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(15),

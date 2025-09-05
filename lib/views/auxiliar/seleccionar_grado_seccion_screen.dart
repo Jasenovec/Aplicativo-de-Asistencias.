@@ -3,6 +3,8 @@ import 'package:asistencia_app/models/seccion.dart';
 import 'package:asistencia_app/services/parametros_service.dart';
 import 'package:flutter/material.dart';
 import 'asistencia_screen.dart';
+import 'package:intl/intl.dart';
+import 'package:asistencia_app/services/asistencia_service.dart';
 
 const _primary = Color(0xFF1E88E5); // Azul 600
 const _primaryDark = Color(0xFF1976D2); // aZUL 700
@@ -20,6 +22,7 @@ class SeleccionarGradoSeccionScreen extends StatefulWidget {
 class _SeleccionarGradoSeccionScreenState
     extends State<SeleccionarGradoSeccionScreen> {
   final _svc = ParametrosService();
+  final _asistenciaSvc = AsistenciaService();
 
   List<Grado> grados = [];
   List<Seccion> secciones = [];
@@ -228,7 +231,94 @@ class _SeleccionarGradoSeccionScreenState
                           onPressed:
                               (gradoSeleccionado != null &&
                                       seccionSeleccionada != null)
-                                  ? () {
+                                  ? () async {
+                                    final seccionObj = secciones.firstWhere(
+                                      (s) => s.idSeccion == seccionSeleccionada,
+                                    );
+
+                                    //Chequeo de “ya registrado hoy”
+                                    final hoy = DateFormat(
+                                      'yyyy-MM-dd',
+                                    ).format(DateTime.now());
+                                    try {
+                                      final registros = await _asistenciaSvc
+                                          .getAsistenciasPorGradoSeccionFecha(
+                                            gradoSeleccionado!,
+                                            seccionSeleccionada!,
+                                            hoy,
+                                          );
+
+                                      if (registros.isNotEmpty) {
+                                        //Aviso centrado (exclamación roja)
+                                        await showDialog(
+                                          context: context,
+                                          barrierDismissible: true,
+                                          builder:
+                                              (_) => AlertDialog(
+                                                backgroundColor: Colors.white,
+                                                surfaceTintColor: Colors.white,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(16),
+                                                  side: const BorderSide(
+                                                    color: _outline,
+                                                  ),
+                                                ),
+                                                title: Row(
+                                                  children: const [
+                                                    Icon(
+                                                      Icons
+                                                          .error_outline_rounded,
+                                                      color: Colors.red,
+                                                      size: 50.0,
+                                                    ),
+                                                    SizedBox(width: 10),
+                                                    Expanded(
+                                                      child: Text(
+                                                        'Asistencia ya registrada el día de hoy',
+                                                        style: TextStyle(
+                                                          color: _primaryDark,
+                                                          fontWeight:
+                                                              FontWeight.w700,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                content: const Text(
+                                                  'Para cambios, use “Modificar asistencia”.',
+                                                  style: TextStyle(
+                                                    color: _muted,
+                                                    fontSize: 14.5,
+                                                  ),
+                                                ),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed:
+                                                        () => Navigator.pop(
+                                                          context,
+                                                        ),
+                                                    style: TextButton.styleFrom(
+                                                      foregroundColor:
+                                                          _primaryDark,
+                                                      textStyle:
+                                                          const TextStyle(
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                          ),
+                                                    ),
+                                                    child: const Text('Cerrar'),
+                                                  ),
+                                                ],
+                                              ),
+                                        );
+                                        return; //no navegamos
+                                      }
+                                    } catch (_) {
+                                      // si el check falla por red, igual permitimos continuar
+                                    }
+
+                                    //No hay registros: navega normal
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
@@ -236,6 +326,7 @@ class _SeleccionarGradoSeccionScreenState
                                             (_) => AsistenciaScreen(
                                               grado: gradoSeleccionado!,
                                               seccion: seccionSeleccionada!,
+                                              seccionNombre: seccionObj.seccion,
                                             ),
                                       ),
                                     );
