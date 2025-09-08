@@ -5,17 +5,14 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:asistencia_app/models/grado.dart';
 import 'package:asistencia_app/models/seccion.dart';
 import 'package:asistencia_app/services/parametros_service.dart';
-import 'package:asistencia_app/services/asistencia_service.dart'; // 👈 NUEVO
-import 'asistencia_list_screen.dart';
-import 'asistencia_screen.dart'; // 👈 NUEVO (para "Ir a Registrar")
 import 'package:asistencia_app/services/asistencia_service.dart';
-import 'package:intl/intl.dart';
+import 'asistencia_list_screen.dart';
+import 'asistencia_screen.dart';
 
 const _primary = Color(0xFF1E88E5); // Azul 600
-const _primaryDark = Color(0xFF1976D2); // aZUL 700
+const _primaryDark = Color(0xFF1976D2); // Azul 700
 const _outline = Color(0xFFE5E7EB); // Gris 200
 const _muted = Color(0xFF6B7280); // Gris 500
-// Cambia este valor cuando quieras (p. ej., 2, 3, 7, etc.)
 const int kDiasModificables = 7;
 
 class SeleccionarGradoSeccionFechaScreen extends StatefulWidget {
@@ -29,12 +26,9 @@ class SeleccionarGradoSeccionFechaScreen extends StatefulWidget {
 class _SeleccionarGradoSeccionFechaScreenState
     extends State<SeleccionarGradoSeccionFechaScreen> {
   final _svc = ParametrosService();
-
   final _asisSvc = AsistenciaService();
 
-  // Fechas con asistencia (normalizadas a AAAA-MM-DD / solo fecha)
   final Set<DateTime> _diasConAsistencia = {};
-
   DateTime _soloFecha(DateTime d) => DateTime(d.year, d.month, d.day);
 
   List<Grado> grados = [];
@@ -49,7 +43,6 @@ class _SeleccionarGradoSeccionFechaScreenState
   bool cargandoSecciones = true;
 
   DateTime get _hoySoloFecha {
-    // 👈 NUEVO
     final h = DateTime.now();
     return DateTime(h.year, h.month, h.day);
   }
@@ -96,7 +89,6 @@ class _SeleccionarGradoSeccionFechaScreenState
     final hoy = _hoySoloFecha;
     final minDay = hoy.subtract(Duration(days: kDiasModificables));
 
-    // Preparamos todas las consultas (una por día)
     final dias = <DateTime>[];
     final futures = <Future>[];
 
@@ -117,23 +109,19 @@ class _SeleccionarGradoSeccionFechaScreenState
     }
 
     try {
-      final results = await Future.wait(futures); // List<List<Asistencia>>
+      final results = await Future.wait(futures);
       final set = <DateTime>{};
       for (int i = 0; i < results.length; i++) {
-        if ((results[i] as List).isNotEmpty) {
-          set.add(_soloFecha(dias[i]));
-        }
+        if ((results[i] as List).isNotEmpty) set.add(_soloFecha(dias[i]));
       }
-      if (mounted) {
+      if (mounted)
         setState(
           () =>
               _diasConAsistencia
                 ..clear()
                 ..addAll(set),
         );
-      }
     } catch (_) {
-      // si falla, no dibujamos puntos (no rompemos el flujo)
       if (mounted) setState(() => _diasConAsistencia.clear());
     }
   }
@@ -172,12 +160,11 @@ class _SeleccionarGradoSeccionFechaScreenState
       context: context,
       initialDate: fechaSeleccionada ?? today,
       firstDate: DateTime(2023, 1, 1),
-      lastDate: today, // 👈 NUEVO: NO futuras
+      lastDate: today,
       builder: (context, child) {
-        // aplica color al datepicker
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
+            colorScheme: const ColorScheme.light(
               primary: _primary,
               onPrimary: Colors.white,
               onSurface: _primaryDark,
@@ -195,7 +182,6 @@ class _SeleccionarGradoSeccionFechaScreenState
     }
   }
 
-  // 👇 NUEVO: verificación previa a navegar
   Future<void> _validarYContinuar() async {
     if (gradoSeleccionado == null ||
         seccionSeleccionada == null ||
@@ -205,12 +191,10 @@ class _SeleccionarGradoSeccionFechaScreenState
     final hoy = _hoySoloFecha;
     final minDay = hoy.subtract(Duration(days: kDiasModificables));
 
-    // No futuras
     if (fechaSeleccionada!.isAfter(hoy)) {
       mostrarError('Elija una fecha igual o anterior a hoy.');
       return;
     }
-    // No más antiguas que el rango permitido
     final dSel = DateTime(
       fechaSeleccionada!.year,
       fechaSeleccionada!.month,
@@ -225,6 +209,11 @@ class _SeleccionarGradoSeccionFechaScreenState
 
     final fechaStr = DateFormat('yyyy-MM-dd').format(fechaSeleccionada!);
 
+    final seccionObj = secciones.firstWhere(
+      (s) => s.idSeccion == seccionSeleccionada,
+    );
+    final letraSeccion = seccionObj.seccion;
+
     try {
       final registros = await AsistenciaService()
           .getAsistenciasPorGradoSeccionFecha(
@@ -235,17 +224,14 @@ class _SeleccionarGradoSeccionFechaScreenState
 
       if (registros.isEmpty) {
         if (isSameDay(fechaSeleccionada, _hoySoloFecha)) {
-          // HOY sin registros -> sugerir registrar
-          // (mantiene tu estilo porque usa el tema actual)
           // ignore: use_build_context_synchronously
           await showDialog(
             context: context,
-            barrierDismissible: false, // evita cierres accidentales
+            barrierDismissible: false,
             builder:
                 (_) => AlertDialog(
                   backgroundColor: Colors.white,
-                  surfaceTintColor:
-                      Colors.white, // evita tinte gris (Material 3)
+                  surfaceTintColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                     side: const BorderSide(color: _outline),
@@ -301,6 +287,7 @@ class _SeleccionarGradoSeccionFechaScreenState
                                 (_) => AsistenciaScreen(
                                   grado: gradoSeleccionado!,
                                   seccion: seccionSeleccionada!,
+                                  seccionNombre: letraSeccion,
                                 ),
                           ),
                         );
@@ -315,7 +302,6 @@ class _SeleccionarGradoSeccionFechaScreenState
         return;
       }
 
-      // Hay registros -> ver/modificar
       // ignore: use_build_context_synchronously
       Navigator.push(
         context,
@@ -325,6 +311,7 @@ class _SeleccionarGradoSeccionFechaScreenState
                 grado: gradoSeleccionado!,
                 seccion: seccionSeleccionada!,
                 fecha: fechaStr,
+                seccionNombre: letraSeccion,
               ),
         ),
       );
@@ -337,10 +324,9 @@ class _SeleccionarGradoSeccionFechaScreenState
   Widget build(BuildContext context) {
     final base = Theme.of(context);
 
-    // ====== RANGO PERMITIDO ======
-    final hoy = _hoySoloFecha; // ya lo tienes
+    final hoy = _hoySoloFecha;
     final minDay = hoy.subtract(Duration(days: kDiasModificables));
-    final lastDay = hoy; // ya lo usabas como límite superior
+    final lastDay = hoy;
 
     final localTheme = base.copyWith(
       scaffoldBackgroundColor: Colors.white,
@@ -388,240 +374,260 @@ class _SeleccionarGradoSeccionFechaScreenState
       data: localTheme,
       child: Scaffold(
         appBar: AppBar(title: const Text('Modificar asistencia')),
-        body: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20.0),
-            child: Card(
-              color: Colors.white,
-              elevation: 8,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-                side: const BorderSide(color: Color(0xFFF3F4F6)),
+        // 👇 AppBar fijo. Solo el contenido (card) scrollea siempre.
+        body: SafeArea(
+          bottom: true,
+          child: ScrollConfiguration(
+            behavior: const _NoGlowBehavior(),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: ClampingScrollPhysics(), // scroll suave (Android)
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text(
-                      'Seleccione un grado, una sección y una fecha',
-                      style: TextStyle(
-                        color: _muted,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Grado
-                    cargandoGrados
-                        ? const Center(
-                          child: CircularProgressIndicator(color: _primary),
-                        )
-                        : DropdownButtonFormField<int>(
-                          value: gradoSeleccionado,
-                          isExpanded: true,
-                          decoration: const InputDecoration(
-                            labelText: 'Seleccionar grado',
+              padding: const EdgeInsets.fromLTRB(
+                20,
+                12,
+                20,
+                28,
+              ), // margen inferior extra
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: Card(
+                  color: Colors.white,
+                  elevation: 8,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    side: const BorderSide(color: Color(0xFFF3F4F6)),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Text(
+                          'Seleccione un grado, una sección y una fecha',
+                          style: TextStyle(
+                            color: _muted,
+                            fontWeight: FontWeight.w500,
                           ),
-                          items:
-                              grados
-                                  .map(
-                                    (g) => DropdownMenuItem<int>(
-                                      value: g.nroGrado,
-                                      child: Text(nombreGrado(g.nroGrado)),
-                                    ),
-                                  )
-                                  .toList(),
-                          onChanged: (valor) {
-                            setState(() {
-                              gradoSeleccionado = valor;
-                              seccionSeleccionada = null;
-                              fechaSeleccionada = null;
-                            });
-                            // 👇 carga puntitos cuando haya grado+sección
-                            _cargarPuntosRango();
-                          },
                         ),
+                        const SizedBox(height: 16),
 
-                    const SizedBox(height: 16),
+                        // Grado
+                        cargandoGrados
+                            ? const Center(
+                              child: CircularProgressIndicator(color: _primary),
+                            )
+                            : DropdownButtonFormField<int>(
+                              value: gradoSeleccionado,
+                              isExpanded: true,
+                              decoration: const InputDecoration(
+                                labelText: 'Seleccionar grado',
+                              ),
+                              items:
+                                  grados
+                                      .map(
+                                        (g) => DropdownMenuItem<int>(
+                                          value: g.nroGrado,
+                                          child: Text(nombreGrado(g.nroGrado)),
+                                        ),
+                                      )
+                                      .toList(),
+                              onChanged: (valor) {
+                                setState(() {
+                                  gradoSeleccionado = valor;
+                                  seccionSeleccionada = null;
+                                  fechaSeleccionada = null;
+                                });
+                                _cargarPuntosRango();
+                              },
+                            ),
 
-                    // Sección
-                    cargandoSecciones
-                        ? const Center(
-                          child: CircularProgressIndicator(color: _primary),
-                        )
-                        : DropdownButtonFormField<int>(
-                          value: seccionSeleccionada,
-                          isExpanded: true,
-                          decoration: const InputDecoration(
-                            labelText: 'Seleccionar sección',
+                        const SizedBox(height: 16),
+
+                        // Sección
+                        cargandoSecciones
+                            ? const Center(
+                              child: CircularProgressIndicator(color: _primary),
+                            )
+                            : DropdownButtonFormField<int>(
+                              value: seccionSeleccionada,
+                              isExpanded: true,
+                              decoration: const InputDecoration(
+                                labelText: 'Seleccionar sección',
+                              ),
+                              items:
+                                  secciones
+                                      .map(
+                                        (s) => DropdownMenuItem<int>(
+                                          value: s.idSeccion,
+                                          child: Text(s.seccion),
+                                        ),
+                                      )
+                                      .toList(),
+                              onChanged: (valor) {
+                                setState(() => seccionSeleccionada = valor);
+                                _cargarPuntosRango();
+                              },
+                            ),
+
+                        const SizedBox(height: 16),
+
+                        // Calendario con ventana de días
+                        Card(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                          items:
-                              secciones
-                                  .map(
-                                    (s) => DropdownMenuItem<int>(
-                                      value: s.idSeccion,
-                                      child: Text(s.seccion),
+                          elevation: 4,
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: TableCalendar(
+                              locale: 'es_ES',
+                              firstDay: DateTime(2023, 1, 1),
+                              lastDay: lastDay,
+                              eventLoader: (day) {
+                                final d = _soloFecha(day);
+                                return _diasConAsistencia.contains(d)
+                                    ? const ['has']
+                                    : const [];
+                              },
+                              calendarBuilders: CalendarBuilders(
+                                markerBuilder: (context, day, events) {
+                                  if (events.isEmpty)
+                                    return const SizedBox.shrink();
+                                  return Align(
+                                    alignment: Alignment.bottomCenter,
+                                    child: Container(
+                                      margin: const EdgeInsets.only(bottom: 4),
+                                      width: 5,
+                                      height: 5,
+                                      decoration: const BoxDecoration(
+                                        color: _primaryDark,
+                                        shape: BoxShape.circle,
+                                      ),
                                     ),
-                                  )
-                                  .toList(),
-                          onChanged: (valor) {
-                            setState(() => seccionSeleccionada = valor);
-                            // 👇 carga puntitos cuando haya grado+sección
-                            _cargarPuntosRango();
-                          },
-                        ),
-
-                    const SizedBox(height: 16),
-
-                    // Calendario con ventana de días
-                    Card(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 4,
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: TableCalendar(
-                          locale: 'es_ES',
-                          firstDay: DateTime(2023, 1, 1),
-                          lastDay: lastDay, // tope: hoy
-                          // Días habilitados ya los controlas con enabledDayPredicate
-                          eventLoader: (day) {
-                            final d = _soloFecha(day);
-                            return _diasConAsistencia.contains(d)
-                                ? const ['has']
-                                : const [];
-                          },
-
-                          calendarBuilders: CalendarBuilders(
-                            markerBuilder: (context, day, events) {
-                              if (events.isEmpty)
-                                return const SizedBox.shrink();
-                              // Puntito centrado abajo
-                              return Align(
-                                alignment: Alignment.bottomCenter,
-                                child: Container(
-                                  margin: const EdgeInsets.only(bottom: 4),
-                                  width: 5,
-                                  height: 5,
-                                  decoration: const BoxDecoration(
-                                    color: _primaryDark, // tu azul 700
-                                    shape: BoxShape.circle,
+                                  );
+                                },
+                              ),
+                              focusedDay: () {
+                                final fd = focusedDay;
+                                if (fd.isAfter(lastDay)) return lastDay;
+                                if (DateTime(
+                                  fd.year,
+                                  fd.month,
+                                  fd.day,
+                                ).isBefore(minDay)) {
+                                  return minDay;
+                                }
+                                return fd;
+                              }(),
+                              enabledDayPredicate: (day) {
+                                final d = DateTime(
+                                  day.year,
+                                  day.month,
+                                  day.day,
+                                );
+                                return !d.isAfter(lastDay) &&
+                                    !d.isBefore(minDay);
+                              },
+                              selectedDayPredicate:
+                                  (day) => isSameDay(fechaSeleccionada, day),
+                              onDaySelected: (selectedDay, focusDay) {
+                                final d = DateTime(
+                                  selectedDay.year,
+                                  selectedDay.month,
+                                  selectedDay.day,
+                                );
+                                if (d.isAfter(lastDay) || d.isBefore(minDay)) {
+                                  mostrarError(
+                                    'Solo puede modificar asistencias de los últimos $kDiasModificables días.',
+                                  );
+                                  return;
+                                }
+                                setState(() {
+                                  fechaSeleccionada = d;
+                                  focusedDay = focusDay;
+                                });
+                              },
+                              calendarStyle: CalendarStyle(
+                                todayDecoration: BoxDecoration(
+                                  color: _primary.withOpacity(0.18),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: _primary,
+                                    width: 1.2,
                                   ),
                                 ),
-                              );
-                            },
-                          ),
-
-                          focusedDay: () {
-                            // Clamp del focusedDay para que nunca apunte fuera del rango
-                            final fd = focusedDay;
-                            if (fd.isAfter(lastDay)) return lastDay;
-                            if (DateTime(
-                              fd.year,
-                              fd.month,
-                              fd.day,
-                            ).isBefore(minDay)) {
-                              return minDay;
-                            }
-                            return fd;
-                          }(),
-                          // Solo habilita días entre minDay y hoy (ambos inclusive)
-                          enabledDayPredicate: (day) {
-                            final d = DateTime(day.year, day.month, day.day);
-                            return !d.isAfter(lastDay) && !d.isBefore(minDay);
-                          },
-                          selectedDayPredicate:
-                              (day) => isSameDay(fechaSeleccionada, day),
-                          onDaySelected: (selectedDay, focusDay) {
-                            final d = DateTime(
-                              selectedDay.year,
-                              selectedDay.month,
-                              selectedDay.day,
-                            );
-                            if (d.isAfter(lastDay) || d.isBefore(minDay)) {
-                              mostrarError(
-                                'Solo puede modificar asistencias de los últimos $kDiasModificables días.',
-                              );
-                              return;
-                            }
-                            setState(() {
-                              fechaSeleccionada = d;
-                              focusedDay = focusDay;
-                            });
-                          },
-                          calendarStyle: CalendarStyle(
-                            todayDecoration: BoxDecoration(
-                              color: _primary.withOpacity(0.18),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: _primary, width: 1.2),
-                            ),
-                            selectedDecoration: const BoxDecoration(
-                              color: _primaryDark,
-                              shape: BoxShape.circle,
-                            ),
-                            weekendTextStyle: const TextStyle(color: _muted),
-                            outsideTextStyle: const TextStyle(
-                              color: Color(0xFF9CA3AF),
-                            ),
-                          ),
-                          headerStyle: const HeaderStyle(
-                            formatButtonVisible: false,
-                            titleCentered: true,
-                            leftChevronIcon: Icon(
-                              Icons.chevron_left_rounded,
-                              color: _primaryDark,
-                            ),
-                            rightChevronIcon: Icon(
-                              Icons.chevron_right_rounded,
-                              color: _primaryDark,
-                            ),
-                            titleTextStyle: TextStyle(
-                              color: _primaryDark,
-                              fontWeight: FontWeight.w700,
+                                selectedDecoration: const BoxDecoration(
+                                  color: _primaryDark,
+                                  shape: BoxShape.circle,
+                                ),
+                                weekendTextStyle: const TextStyle(
+                                  color: _muted,
+                                ),
+                                outsideTextStyle: const TextStyle(
+                                  color: Color(0xFF9CA3AF),
+                                ),
+                              ),
+                              headerStyle: const HeaderStyle(
+                                formatButtonVisible: false,
+                                titleCentered: true,
+                                leftChevronIcon: Icon(
+                                  Icons.chevron_left_rounded,
+                                  color: _primaryDark,
+                                ),
+                                rightChevronIcon: Icon(
+                                  Icons.chevron_right_rounded,
+                                  color: _primaryDark,
+                                ),
+                                titleTextStyle: TextStyle(
+                                  color: _primaryDark,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
 
-                    const SizedBox(height: 10),
+                        const SizedBox(height: 10),
 
-                    // Campo de fecha + ícono (solo ícono, sin abrir datepicker)
-                    TextFormField(
-                      readOnly: true,
-                      controller: TextEditingController(text: _textoFecha()),
-                      decoration: const InputDecoration(
-                        hintText: 'dd / mm / aaaa',
-                        suffixIcon: Icon(
-                          Icons.calendar_today_rounded,
-                          color: _primaryDark,
+                        // Campo de fecha (solo visual)
+                        TextFormField(
+                          readOnly: true,
+                          controller: TextEditingController(
+                            text: _textoFecha(),
+                          ),
+                          decoration: const InputDecoration(
+                            hintText: 'dd / mm / aaaa',
+                            suffixIcon: Icon(
+                              Icons.calendar_today_rounded,
+                              color: _primaryDark,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
 
-                    const SizedBox(height: 20),
+                        const SizedBox(height: 16),
 
-                    // Botón Buscar -> valida antes de navegar
-                    Align(
-                      alignment: Alignment.center,
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(minWidth: 140),
-                        child: ElevatedButton.icon(
-                          icon: const Icon(Icons.search_rounded),
-                          label: const Text('Buscar'),
-                          onPressed:
-                              (gradoSeleccionado != null &&
-                                      seccionSeleccionada != null &&
-                                      fechaSeleccionada != null)
-                                  ? _validarYContinuar // 👈 NUEVO
-                                  : null,
+                        // Botón Buscar
+                        Align(
+                          alignment: Alignment.center,
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(minWidth: 140),
+                            child: ElevatedButton.icon(
+                              icon: const Icon(Icons.search_rounded),
+                              label: const Text('Buscar'),
+                              onPressed:
+                                  (gradoSeleccionado != null &&
+                                          seccionSeleccionada != null &&
+                                          fechaSeleccionada != null)
+                                      ? _validarYContinuar
+                                      : null,
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -629,5 +635,19 @@ class _SeleccionarGradoSeccionFechaScreenState
         ),
       ),
     );
+  }
+}
+
+/// Scroll suave y siempre disponible; sin glow ni stretch agresivo.
+class _NoGlowBehavior extends ScrollBehavior {
+  const _NoGlowBehavior();
+
+  @override
+  Widget buildOverscrollIndicator(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
+    return child;
   }
 }

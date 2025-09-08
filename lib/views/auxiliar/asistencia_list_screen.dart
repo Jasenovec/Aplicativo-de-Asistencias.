@@ -14,12 +14,14 @@ class AsistenciaListScreen extends StatefulWidget {
   final int grado;
   final int seccion;
   final String fecha; // yyyy-MM-dd
+  final String? seccionNombre; // opcional, para mostrar en la cabecera
 
   const AsistenciaListScreen({
     super.key,
     required this.grado,
     required this.seccion,
     required this.fecha,
+    this.seccionNombre,
   });
 
   @override
@@ -359,7 +361,7 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
                       Icon(Icons.class_outlined, size: 22, color: _primaryDark),
                       const SizedBox(width: 6),
                       Text(
-                        'Grado: ${widget.grado}º • Sección: ${widget.seccion}',
+                        'Grado: ${widget.grado}º • Sección: ${widget.seccionNombre ?? widget.seccion}',
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 16,

@@ -40,21 +40,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 20,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
-                    ),
                     child: Image.asset(
                       "assets/images/logo_colegio.png",
-                      height: 150,
+                      height: 190,
                     ),
                   ),
                   const SizedBox(height: 20),
