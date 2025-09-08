@@ -1,3 +1,4 @@
+// lib/screens/seleccionar_grado_seccion_fecha_screen.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -8,11 +9,12 @@ import 'package:asistencia_app/services/parametros_service.dart';
 import 'package:asistencia_app/services/asistencia_service.dart';
 import 'asistencia_list_screen.dart';
 import 'asistencia_screen.dart';
+import 'package:asistencia_app/utils/calendar_rules.dart';
 
-const _primary = Color(0xFF1E88E5); // Azul 600
-const _primaryDark = Color(0xFF1976D2); // Azul 700
-const _outline = Color(0xFFE5E7EB); // Gris 200
-const _muted = Color(0xFF6B7280); // Gris 500
+const _primary = Color(0xFF1E88E5);
+const _primaryDark = Color(0xFF1976D2);
+const _outline = Color(0xFFE5E7EB);
+const _muted = Color(0xFF6B7280);
 const int kDiasModificables = 7;
 
 class SeleccionarGradoSeccionFechaScreen extends StatefulWidget {
@@ -87,7 +89,7 @@ class _SeleccionarGradoSeccionFechaScreenState
     }
 
     final hoy = _hoySoloFecha;
-    final minDay = hoy.subtract(Duration(days: kDiasModificables));
+    final minDay = hoy.subtract(const Duration(days: kDiasModificables));
 
     final dias = <DateTime>[];
     final futures = <Future>[];
@@ -189,17 +191,30 @@ class _SeleccionarGradoSeccionFechaScreenState
       return;
 
     final hoy = _hoySoloFecha;
-    final minDay = hoy.subtract(Duration(days: kDiasModificables));
+    final minDay = hoy.subtract(const Duration(days: kDiasModificables));
 
+    // No futuras
     if (fechaSeleccionada!.isAfter(hoy)) {
       mostrarError('Elija una fecha igual o anterior a hoy.');
       return;
     }
+
     final dSel = DateTime(
       fechaSeleccionada!.year,
       fechaSeleccionada!.month,
       fechaSeleccionada!.day,
     );
+
+    // No laborables
+    if (CalendarRules.esNoLaborable(dSel)) {
+      await showNoLaborableMessage(
+        context,
+        detalle: 'La fecha seleccionada es no laborable.',
+      );
+      return;
+    }
+
+    // No más antiguas que el rango permitido
     if (dSel.isBefore(minDay)) {
       mostrarError(
         'Solo puede modificar asistencias de los últimos $kDiasModificables días.',
@@ -325,7 +340,7 @@ class _SeleccionarGradoSeccionFechaScreenState
     final base = Theme.of(context);
 
     final hoy = _hoySoloFecha;
-    final minDay = hoy.subtract(Duration(days: kDiasModificables));
+    final minDay = hoy.subtract(const Duration(days: kDiasModificables));
     final lastDay = hoy;
 
     final localTheme = base.copyWith(
@@ -374,21 +389,15 @@ class _SeleccionarGradoSeccionFechaScreenState
       data: localTheme,
       child: Scaffold(
         appBar: AppBar(title: const Text('Modificar asistencia')),
-        // 👇 AppBar fijo. Solo el contenido (card) scrollea siempre.
         body: SafeArea(
           bottom: true,
           child: ScrollConfiguration(
             behavior: const _NoGlowBehavior(),
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(
-                parent: ClampingScrollPhysics(), // scroll suave (Android)
+                parent: ClampingScrollPhysics(),
               ),
-              padding: const EdgeInsets.fromLTRB(
-                20,
-                12,
-                20,
-                28,
-              ), // margen inferior extra
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
               child: Align(
                 alignment: Alignment.topCenter,
                 child: Card(
@@ -473,7 +482,7 @@ class _SeleccionarGradoSeccionFechaScreenState
 
                         const SizedBox(height: 16),
 
-                        // Calendario con ventana de días
+                        // Calendario con ventana de días (sin fines de semana ni feriados)
                         Card(
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
@@ -516,19 +525,21 @@ class _SeleccionarGradoSeccionFechaScreenState
                                   fd.year,
                                   fd.month,
                                   fd.day,
-                                ).isBefore(minDay)) {
+                                ).isBefore(minDay))
                                   return minDay;
-                                }
                                 return fd;
                               }(),
+                              // 👇 Habilita solo días hábiles dentro del rango
                               enabledDayPredicate: (day) {
                                 final d = DateTime(
                                   day.year,
                                   day.month,
                                   day.day,
                                 );
-                                return !d.isAfter(lastDay) &&
-                                    !d.isBefore(minDay);
+                                final enRango =
+                                    !d.isAfter(lastDay) && !d.isBefore(minDay);
+                                return enRango &&
+                                    !CalendarRules.esNoLaborable(d);
                               },
                               selectedDayPredicate:
                                   (day) => isSameDay(fechaSeleccionada, day),
@@ -538,6 +549,14 @@ class _SeleccionarGradoSeccionFechaScreenState
                                   selectedDay.month,
                                   selectedDay.day,
                                 );
+                                if (CalendarRules.esNoLaborable(d)) {
+                                  showNoLaborableMessage(
+                                    context,
+                                    detalle:
+                                        'No hay clases en fines de semana ni feriados.',
+                                  );
+                                  return;
+                                }
                                 if (d.isAfter(lastDay) || d.isBefore(minDay)) {
                                   mostrarError(
                                     'Solo puede modificar asistencias de los últimos $kDiasModificables días.',
@@ -567,6 +586,9 @@ class _SeleccionarGradoSeccionFechaScreenState
                                 ),
                                 outsideTextStyle: const TextStyle(
                                   color: Color(0xFF9CA3AF),
+                                ),
+                                disabledTextStyle: const TextStyle(
+                                  color: Color(0xFFB0B7C3),
                                 ),
                               ),
                               headerStyle: const HeaderStyle(
@@ -638,10 +660,8 @@ class _SeleccionarGradoSeccionFechaScreenState
   }
 }
 
-/// Scroll suave y siempre disponible; sin glow ni stretch agresivo.
 class _NoGlowBehavior extends ScrollBehavior {
   const _NoGlowBehavior();
-
   @override
   Widget buildOverscrollIndicator(
     BuildContext context,

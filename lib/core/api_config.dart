@@ -3,13 +3,14 @@ import 'package:dio/dio.dart';
 class ApiConfig {
   static final Dio dio = Dio(
     BaseOptions(
-      baseUrl: 'http://192.168.0.192:3000', // Emulador Android
+      baseUrl: 'http://192.168.137.1:3000', // Emulador Android
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
       headers: {'Content-Type': 'application/json'},
     ),
   );
 
+  // IP solmar: 192.168.137.1
   // IP de mi casa: 192.168.0.192
 
   static bool _attached = false;

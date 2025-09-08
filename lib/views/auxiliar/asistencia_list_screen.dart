@@ -13,8 +13,8 @@ const _muted = Color(0xFF6B7280); // Gris 500
 class AsistenciaListScreen extends StatefulWidget {
   final int grado;
   final int seccion;
-  final String fecha; // yyyy-MM-dd
-  final String? seccionNombre; // opcional, para mostrar en la cabecera
+  final String fecha;
+  final String? seccionNombre;
 
   const AsistenciaListScreen({
     super.key,
@@ -29,26 +29,21 @@ class AsistenciaListScreen extends StatefulWidget {
 }
 
 class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
-  // --- UI state (misma UX que registrar) ---
   final _searchCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
 
   String _query = '';
-  final Map<int, GlobalKey> _itemKeys = {}; // idAsistencia -> key
-  Map<String, int> _letterIndex = {}; // letra -> índice en lista filtrada
+  final Map<int, GlobalKey> _itemKeys = {};
+  Map<String, int> _letterIndex = {};
 
-  // índice alfabético fijo
   bool _isDraggingAlpha = false;
   String _currentLetter = 'A';
-  double? _alphaIndicatorDy;
+  String _lastJumpedLetter = '';
   final List<String> _letters = List.generate(
     26,
     (i) => String.fromCharCode(65 + i),
   );
-  static const double _alphaRailW = 24.0;
-  static const double _alphaRailPad = 8.0;
 
-  // Causas / motivos (igual que registrar)
   static const _causasTJ = [
     'Cita médica',
     'Transporte/accidente',
@@ -65,19 +60,16 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
   ];
   static const _motivosInjust = ['Sin justificación'];
 
-  // Estado local de edición (por registro)
-  final Map<int, String> _estadoEditado = {}; // idAsistencia -> estado
-  final Map<int, String> _observacionEditada = {}; // idAsistencia -> obs
-  final Map<int, String> _causaPorRegistro =
-      {}; // idAsistencia -> texto/'__otra__'
+  final Map<int, String> _estadoEditado = {};
+  final Map<int, String> _observacionEditada = {};
+  final Map<int, String> _causaPorRegistro = {};
 
-  bool _prefilled = false; // para precargar maps con valores actuales
+  bool _prefilled = false;
   bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    // Cargar asistencias del día seleccionado
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final vm = Provider.of<AsistenciaViewModel>(context, listen: false);
       vm.cargarAsistenciasPorGradoSeccionFecha(
@@ -95,7 +87,6 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
     super.dispose();
   }
 
-  // ---------- Helpers ----------
   List<Asistencia> _filter(List<Asistencia> all) {
     if (_query.trim().isEmpty) return all;
     final q = _query.toLowerCase();
@@ -126,30 +117,30 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
     if (ctx != null) {
       await Scrollable.ensureVisible(
         ctx,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOut,
-        alignment: 0,
+        duration: const Duration(milliseconds: 80),
+        curve: Curves.linear,
       );
     }
   }
 
-  void _onAlphaDrag(
-    Offset localPos,
-    double railHeight,
-    List<Asistencia> items,
-  ) {
+  void _handleAlphaDrag({
+    required Offset localPos,
+    required double railHeight,
+    required List<Asistencia> items,
+  }) {
     final cellH = railHeight / _letters.length;
-    int idx = (localPos.dy ~/ cellH);
-    idx = idx.clamp(0, _letters.length - 1);
+    int idx = (localPos.dy ~/ cellH).clamp(0, _letters.length - 1);
     final letter = _letters[idx];
+
+    if (letter != _lastJumpedLetter) {
+      _lastJumpedLetter = letter;
+      _jumpToLetter(letter, items);
+    }
 
     setState(() {
       _isDraggingAlpha = true;
       _currentLetter = letter;
-      _alphaIndicatorDy = localPos.dy.clamp(0, railHeight);
     });
-
-    _jumpToLetter(letter, items);
   }
 
   void _prefillIfNeeded(List<Asistencia> list) {
@@ -159,7 +150,6 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
       if (a.observacion != null && a.observacion!.trim().isNotEmpty) {
         _observacionEditada[a.idAsistencia] = a.observacion!.trim();
       }
-      // No inferimos causa; queda vacía hasta que el usuario toque
     }
     _prefilled = true;
   }
@@ -172,7 +162,6 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
   @override
   Widget build(BuildContext context) {
     final vm = Provider.of<AsistenciaViewModel>(context);
-
     final base = Theme.of(context);
     final localTheme = base.copyWith(
       scaffoldBackgroundColor: Colors.white,
@@ -206,8 +195,7 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
       ),
     );
 
-    final reservedBottom =
-        16 + 48 + 16 + MediaQuery.of(context).padding.bottom; // paddings + btn
+    final bottomInset = MediaQuery.of(context).padding.bottom;
 
     if (vm.isLoading) {
       return Theme(
@@ -219,6 +207,11 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
       );
     }
 
+    final double alphaRailW = (MediaQuery.of(context).size.width * 0.06).clamp(
+      30.0,
+      36.0,
+    );
+
     final list = vm.asistencias;
     _prefillIfNeeded(list);
 
@@ -229,10 +222,11 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
       data: localTheme,
       child: Scaffold(
         appBar: AppBar(title: const Text('Modificar asistencia')),
-        bottomNavigationBar: SafeArea(
-          minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+
+        bottomNavigationBar: Padding(
+          padding: EdgeInsets.fromLTRB(16, 8, 16, bottomInset + 8),
           child: SizedBox(
-            height: 48,
+            height: 56,
             child: ElevatedButton.icon(
               icon:
                   _isSaving
@@ -257,7 +251,6 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
                   _isSaving
                       ? null
                       : () async {
-                        // Guardamos solo los que cambiaron
                         setState(() => _isSaving = true);
                         try {
                           for (final a in list) {
@@ -265,21 +258,19 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
                                 _estadoEditado[a.idAsistencia] ??
                                 a.estadoAsistencia;
                             final nuevaObs =
-                                _observacionEditada[a.idAsistencia] ??
-                                a.observacion ??
+                                _observacionEditada[a.idAsistencia]?.trim() ??
                                 '';
 
                             final cambioEstado =
                                 nuevoEstado != a.estadoAsistencia;
                             final cambioObs =
-                                (nuevaObs).trim() !=
-                                (a.observacion ?? '').trim();
+                                nuevaObs != (a.observacion ?? '').trim();
 
                             if (cambioEstado || cambioObs) {
                               await vm.actualizarAsistencia(
                                 idAsistencia: a.idAsistencia,
                                 estado: nuevoEstado,
-                                observacion: nuevaObs.trim(),
+                                observacion: nuevaObs,
                               );
                             }
                           }
@@ -334,8 +325,7 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
                                 ),
                           );
                           if (!mounted) return;
-                          Navigator.of(context).pop(); // ✅ salir tras guardar
-                          return;
+                          Navigator.of(context).pop();
                         } catch (_) {
                           if (!mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -348,9 +338,9 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
             ),
           ),
         ),
+
         body: Column(
           children: [
-            // Cabecera (grado/sección/fecha + buscador)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: Column(
@@ -394,24 +384,17 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
             ),
             const SizedBox(height: 8),
 
-            // Lista + riel alfabético fijo
             Expanded(
               child: Stack(
                 children: [
                   ListView.separated(
                     controller: _scrollCtrl,
-                    padding: EdgeInsets.fromLTRB(
-                      16,
-                      8,
-                      16 + _alphaRailW + _alphaRailPad,
-                      reservedBottom,
-                    ),
+                    padding: EdgeInsets.fromLTRB(16, 8, 52, 24 + bottomInset),
                     itemCount: filtrados.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, i) {
                       final a = filtrados[i];
                       final id = a.idAsistencia;
-
                       _itemKeys.putIfAbsent(id, () => GlobalKey());
 
                       final estado = _estadoEditado[id] ?? a.estadoAsistencia;
@@ -437,54 +420,68 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                const SizedBox(height: 8),
+                                const SizedBox(height: 10),
 
-                                // ===== Estados (chips) =====
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 4,
-                                  children:
-                                      ['A', 'FI', 'FJ', 'TI', 'TJ'].map((s) {
-                                        final selected = estado == s;
-                                        return ChoiceChip(
-                                          label: Text(s),
-                                          selected: selected,
-                                          onSelected: (_) {
-                                            setState(() {
-                                              _estadoEditado[id] = s;
-                                              if (s == 'A') {
-                                                // limpiar causa y observación
-                                                _causaPorRegistro.remove(id);
-                                                _observacionEditada.remove(id);
-                                                FocusScope.of(
-                                                  context,
-                                                ).unfocus();
-                                              }
-                                            });
-                                          },
-                                          selectedColor: _primary.withOpacity(
-                                            0.15,
-                                          ),
-                                          labelStyle: TextStyle(
-                                            color:
-                                                selected
-                                                    ? _primaryDark
-                                                    : Colors.black87,
-                                            fontWeight:
-                                                selected
-                                                    ? FontWeight.w600
-                                                    : FontWeight.w400,
-                                          ),
-                                          side: const BorderSide(
-                                            color: _outline,
-                                          ),
-                                        );
-                                      }).toList(),
+                                SizedBox(
+                                  height: 36,
+                                  child: ScrollConfiguration(
+                                    behavior: const _NoGlowBehavior(),
+                                    child: ListView(
+                                      scrollDirection: Axis.horizontal,
+                                      physics: const BouncingScrollPhysics(
+                                        parent: AlwaysScrollableScrollPhysics(),
+                                      ),
+                                      children:
+                                          ['A', 'FI', 'FJ', 'TI', 'TJ'].map((
+                                            s,
+                                          ) {
+                                            final selected = estado == s;
+                                            return Padding(
+                                              padding: const EdgeInsets.only(
+                                                right: 8,
+                                              ),
+                                              child: ChoiceChip(
+                                                label: Text(s),
+                                                selected: selected,
+                                                onSelected: (_) {
+                                                  setState(() {
+                                                    _estadoEditado[id] = s;
+                                                    if (s == 'A') {
+                                                      _causaPorRegistro.remove(
+                                                        id,
+                                                      );
+                                                      _observacionEditada
+                                                          .remove(id);
+                                                      FocusScope.of(
+                                                        context,
+                                                      ).unfocus();
+                                                    }
+                                                  });
+                                                },
+                                                selectedColor: _primary
+                                                    .withOpacity(0.15),
+                                                labelStyle: TextStyle(
+                                                  color:
+                                                      selected
+                                                          ? _primaryDark
+                                                          : Colors.black87,
+                                                  fontWeight:
+                                                      selected
+                                                          ? FontWeight.w600
+                                                          : FontWeight.w400,
+                                                ),
+                                                side: const BorderSide(
+                                                  color: _outline,
+                                                ),
+                                              ),
+                                            );
+                                          }).toList(),
+                                    ),
+                                  ),
                                 ),
 
-                                const SizedBox(height: 8),
+                                const SizedBox(height: 10),
 
-                                // ===== Causas/Motivos según estado =====
                                 Builder(
                                   builder: (_) {
                                     List<String>? opciones;
@@ -493,9 +490,8 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
                                     if (estado == 'TI' || estado == 'FI')
                                       opciones = _motivosInjust;
 
-                                    if (opciones == null) {
+                                    if (opciones == null)
                                       return const SizedBox.shrink();
-                                    }
 
                                     return Wrap(
                                       spacing: 8,
@@ -510,7 +506,6 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
                                             onSelected: (_) {
                                               setState(() {
                                                 _causaPorRegistro[id] = op;
-                                                // si es una causa “definida”, la volcamos a obs
                                                 _observacionEditada[id] = op;
                                               });
                                             },
@@ -541,7 +536,6 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
                                             setState(() {
                                               _causaPorRegistro[id] =
                                                   '__otra__';
-                                              // no sobreescribimos obs; el usuario escribe
                                             });
                                           },
                                           selectedColor: _primary.withOpacity(
@@ -558,7 +552,6 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
 
                                 const SizedBox(height: 10),
 
-                                // ===== Observación (reglas de visibilidad) =====
                                 AnimatedSwitcher(
                                   duration: const Duration(milliseconds: 150),
                                   switchInCurve: Curves.easeOut,
@@ -570,11 +563,11 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
                                         ((estado == 'TJ' || estado == 'FJ')
                                             ? causa == '__otra__'
                                             : true);
-                                    if (!showObs) {
+                                    if (!showObs)
                                       return const SizedBox.shrink(
                                         key: ValueKey('hidden'),
                                       );
-                                    }
+
                                     return TextField(
                                       key: const ValueKey('obs'),
                                       controller: TextEditingController(
@@ -597,37 +590,42 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
                     },
                   ),
 
-                  // ===== Riel alfabético fijo =====
                   Positioned(
                     right: 0,
                     top: 0,
-                    bottom: reservedBottom - 10,
+                    bottom: 0,
                     child: SizedBox(
-                      width: _alphaRailW + _alphaRailPad,
+                      width: alphaRailW,
                       child: LayoutBuilder(
                         builder: (ctx, cons) {
                           final railH = cons.maxHeight;
                           final cellH = railH / _letters.length;
-                          final fontSize = (cellH * 0.75).clamp(10.0, 14.0);
+                          final fontSize = (cellH * 0.75).clamp(11.0, 16.0);
 
                           return GestureDetector(
                             behavior: HitTestBehavior.opaque,
                             onPanDown:
-                                (d) => _onAlphaDrag(
-                                  d.localPosition,
-                                  railH,
-                                  filtrados,
+                                (d) => _handleAlphaDrag(
+                                  localPos: d.localPosition,
+                                  railHeight: railH,
+                                  items: filtrados,
                                 ),
                             onPanUpdate:
-                                (d) => _onAlphaDrag(
-                                  d.localPosition,
-                                  railH,
-                                  filtrados,
+                                (d) => _handleAlphaDrag(
+                                  localPos: d.localPosition,
+                                  railHeight: railH,
+                                  items: filtrados,
                                 ),
                             onPanEnd:
-                                (_) => setState(() => _isDraggingAlpha = false),
+                                (_) => setState(() {
+                                  _isDraggingAlpha = false;
+                                  _lastJumpedLetter = '';
+                                }),
                             onPanCancel:
-                                () => setState(() => _isDraggingAlpha = false),
+                                () => setState(() {
+                                  _isDraggingAlpha = false;
+                                  _lastJumpedLetter = '';
+                                }),
                             child: Stack(
                               children: [
                                 Align(
@@ -640,54 +638,77 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
                                     color: _outline,
                                   ),
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 0,
-                                  ),
-                                  child: Column(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children:
-                                        _letters.map((letter) {
-                                          final active = _letterIndex
-                                              .containsKey(letter);
-                                          return SizedBox(
-                                            height: cellH,
-                                            child: Align(
-                                              alignment: Alignment.center,
-                                              child: Text(
-                                                letter,
-                                                style: TextStyle(
-                                                  fontSize: fontSize,
-                                                  color:
-                                                      active
-                                                          ? _primaryDark
-                                                          : _muted.withOpacity(
-                                                            0.35,
-                                                          ),
-                                                  fontWeight:
-                                                      active
-                                                          ? FontWeight.w700
-                                                          : FontWeight.w400,
-                                                ),
+                                Column(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children:
+                                      _letters.map((letter) {
+                                        final active = _letterIndex.containsKey(
+                                          letter,
+                                        );
+                                        return SizedBox(
+                                          height: cellH,
+                                          child: Center(
+                                            child: Text(
+                                              letter,
+                                              style: TextStyle(
+                                                fontSize: fontSize,
+                                                color: (active
+                                                        ? _primaryDark
+                                                        : _muted.withOpacity(
+                                                          0.35,
+                                                        ))
+                                                    .withOpacity(0.55),
+                                                fontWeight:
+                                                    active
+                                                        ? FontWeight.w700
+                                                        : FontWeight.w500,
                                               ),
                                             ),
-                                          );
-                                        }).toList(),
-                                  ),
+                                          ),
+                                        );
+                                      }).toList(),
                                 ),
-                                if (_isDraggingAlpha)
-                                  Positioned(
-                                    right: _alphaRailW + 8,
-                                    top: ((_alphaIndicatorDy ?? railH / 2) - 22)
-                                        .clamp(0.0, railH - 44),
-                                    child: const _AlphaBubble(),
-                                  ),
                               ],
                             ),
                           );
                         },
+                      ),
+                    ),
+                  ),
+
+                  // Indicador flotante centrado (ligeramente transparente)
+                  IgnorePointer(
+                    ignoring: true,
+                    child: AnimatedOpacity(
+                      opacity: _isDraggingAlpha ? 1 : 0,
+                      duration: const Duration(milliseconds: 100),
+                      child: Center(
+                        child: Container(
+                          width: 112,
+                          height: 112,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.92),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: _outline.withOpacity(0.9),
+                            ),
+                            boxShadow: const [
+                              BoxShadow(blurRadius: 12, color: Colors.black12),
+                            ],
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            _currentLetter,
+                            style: TextStyle(
+                              fontSize: 64,
+                              fontWeight: FontWeight.w800,
+                              color: _primaryDark.withOpacity(
+                                0.75,
+                              ), // un poco transparente
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -701,28 +722,15 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
   }
 }
 
-class _AlphaBubble extends StatelessWidget {
-  const _AlphaBubble();
-
+/// Sin glow ni overscroll agresivo
+class _NoGlowBehavior extends ScrollBehavior {
+  const _NoGlowBehavior();
   @override
-  Widget build(BuildContext context) {
-    // Solo muestra la “pestañita”, la letra actual ya se refleja en la lista
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _outline),
-          boxShadow: const [BoxShadow(blurRadius: 8, color: Colors.black12)],
-        ),
-        child: const Icon(
-          Icons.radio_button_checked,
-          color: _primaryDark,
-          size: 18,
-        ),
-      ),
-    );
+  Widget buildOverscrollIndicator(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
+    return child;
   }
 }

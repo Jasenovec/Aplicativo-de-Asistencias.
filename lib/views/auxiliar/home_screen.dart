@@ -1,6 +1,8 @@
+// lib/screens/home_screen.dart
+import 'dart:async';
+import 'package:asistencia_app/utils/calendar_rules.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'dart:async';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,6 +19,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late Animation<double> _fadeAnimation;
   late Timer _clockTimer;
 
+  bool get _hoyNoLaborable => CalendarRules.esNoLaborable(DateTime.now());
+
   @override
   void initState() {
     super.initState();
@@ -25,10 +29,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       const Duration(seconds: 1),
       (_) => _updateTime(),
     );
-
     _fadeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(seconds: 2),
     );
     _fadeAnimation = CurvedAnimation(
       parent: _fadeController,
@@ -45,10 +48,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     });
   }
 
-  // "Cerrar sesión" -> lleva a /home y borra el historial
-  void _logout() {
+  void _goHome() {
     if (!mounted) return;
     Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+  }
+
+  Future<void> _onAsistenciaTap(VoidCallback nav) async {
+    if (_hoyNoLaborable) {
+      await showNoLaborableMessage(context);
+      return;
+    }
+    nav();
   }
 
   @override
@@ -60,11 +70,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final bool disabled = _hoyNoLaborable;
+
     return Scaffold(
       extendBody: true,
       body: Stack(
         children: [
-          // Fondo
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -77,31 +88,23 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
             ),
           ),
-
-          // Contenido
           SafeArea(
             top: true,
-            bottom: true, // evita que la nav bar tape los botones
+            bottom: true,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               child: FadeTransition(
                 opacity: _fadeAnimation,
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 40),
-
-                    // Logo
+                    const SizedBox(height: 35),
                     Image.asset(
                       "assets/images/logo_colegio.png",
-                      height: 190,
-                      width: 190,
+                      height: 180,
+                      width: 180,
                     ),
-
                     const SizedBox(height: 12),
-
-                    // Títulos
                     const Text(
                       "¡Bienvenido!",
                       style: TextStyle(
@@ -115,10 +118,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       "Sistema de Control de Asistencias",
                       style: TextStyle(fontSize: 18, color: Colors.white70),
                     ),
-
                     const SizedBox(height: 14),
-
-                    // Reloj y fecha
                     Text(
                       _timeString,
                       style: const TextStyle(
@@ -138,10 +138,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         letterSpacing: 0.5,
                       ),
                     ),
-
                     const SizedBox(height: 14),
-
-                    // Descripción
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 14,
@@ -158,60 +155,59 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         style: TextStyle(fontSize: 15, color: Colors.white),
                       ),
                     ),
-
                     const SizedBox(height: 22),
-
-                    // Opciones (más arriba y con tamaños prudentes)
-                    SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0, 0.35),
-                        end: Offset.zero,
-                      ).animate(_fadeAnimation),
-                      child: Column(
-                        children: [
-                          _MenuCard(
-                            icon: Icons.playlist_add_check,
-                            label: "Registrar Asistencia",
-                            color: Colors.greenAccent,
-                            onTap:
-                                () => Navigator.pushNamed(
-                                  context,
-                                  '/seleccionar',
-                                ),
+                    // Menú
+                    _MenuCard(
+                      icon: Icons.playlist_add_check,
+                      label: "Registrar Asistencia",
+                      color: Colors.greenAccent,
+                      enabled: !disabled,
+                      onTap:
+                          () => _onAsistenciaTap(
+                            () => Navigator.pushNamed(context, '/seleccionar'),
                           ),
-                          const SizedBox(height: 14),
-                          _MenuCard(
-                            icon: Icons.list,
-                            label: "Modificar Asistencia",
-                            color: Colors.orangeAccent,
-                            onTap:
-                                () => Navigator.pushNamed(
-                                  context,
-                                  '/ver_asistencias',
-                                ),
-                          ),
-                        ],
-                      ),
                     ),
-
-                    // Pequeño respiro inferior, pero sin empujar demasiado
+                    const SizedBox(height: 14),
+                    _MenuCard(
+                      icon: Icons.list,
+                      label: "Modificar Asistencia",
+                      color: Colors.orangeAccent,
+                      enabled: !disabled,
+                      onTap:
+                          () => _onAsistenciaTap(
+                            () => Navigator.pushNamed(
+                              context,
+                              '/ver_asistencias',
+                            ),
+                          ),
+                    ),
                     const SizedBox(height: 10),
+                    if (disabled)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 6),
+                        child: Text(
+                          'Hoy no hay clases (día no laborable).',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
             ),
           ),
-
-          // Botón rojo "cerrar sesión / ir a /home" (esquina superior izquierda)
+          // Botón rojo /home
           SafeArea(
             child: Align(
               alignment: Alignment.topLeft,
               child: Padding(
                 padding: const EdgeInsets.only(left: 14, top: 8),
                 child: _SquareIconButton(
-                  onTap: _logout,
+                  onTap: _goHome,
                   tooltip: 'Cerrar sesión',
-                  background: const Color(0xFFD7330A), // rojo solicitado
+                  background: const Color(0xFFD7330A),
                   borderColor: const Color(0xFFD7330A),
                   iconColor: Colors.white,
                 ),
@@ -224,14 +220,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 }
 
-// Botón cuadrado con bordes redondeados y el ícono de "salir" mirando a la izquierda
 class _SquareIconButton extends StatelessWidget {
   final VoidCallback onTap;
   final String tooltip;
   final Color background;
   final Color borderColor;
   final Color iconColor;
-
   const _SquareIconButton({
     required this.onTap,
     required this.tooltip,
@@ -282,12 +276,13 @@ class _MenuCard extends StatefulWidget {
   final String label;
   final Color color;
   final VoidCallback onTap;
-
+  final bool enabled;
   const _MenuCard({
     required this.icon,
     required this.label,
     required this.color,
     required this.onTap,
+    this.enabled = true,
   });
 
   @override
@@ -296,45 +291,57 @@ class _MenuCard extends StatefulWidget {
 
 class _MenuCardState extends State<_MenuCard> {
   bool _isPressed = false;
-
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _isPressed = true),
-      onTapUp: (_) {
-        setState(() => _isPressed = false);
-        widget.onTap();
-      },
-      onTapCancel: () => setState(() => _isPressed = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 70),
-        curve: Curves.easeOut,
-        height: 56, // un poco más compacto
-        width: 300, // ancho mayor pero moderado
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(50),
-          boxShadow:
-              _isPressed
-                  ? []
-                  : [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.18),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(widget.icon, size: 28, color: widget.color),
-            const SizedBox(width: 12),
-            Text(
-              widget.label,
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
-            ),
-          ],
+    final disabled = !widget.enabled;
+    return Opacity(
+      opacity: disabled ? 0.55 : 1,
+      child: GestureDetector(
+        onTapDown: (_) {
+          if (!disabled) setState(() => _isPressed = true);
+        },
+        onTapUp: (_) {
+          if (!disabled) {
+            setState(() => _isPressed = false);
+            widget.onTap();
+          } else {
+            showNoLaborableMessage(context);
+          }
+        },
+        onTapCancel: () => setState(() => _isPressed = false),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 70),
+          curve: Curves.easeOut,
+          height: 56,
+          width: 300,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(50),
+            boxShadow:
+                _isPressed
+                    ? []
+                    : [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.18),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(widget.icon, size: 28, color: widget.color),
+              const SizedBox(width: 12),
+              Text(
+                widget.label,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

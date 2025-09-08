@@ -55,7 +55,6 @@ class AsistenciaScreen extends StatelessWidget {
   }
 }
 
-// ⬇️ Cambié a Stateful para manejar búsqueda, scroll y barra alfabética
 class _AsistenciaInner extends StatefulWidget {
   const _AsistenciaInner({
     required this.grado,
@@ -70,11 +69,6 @@ class _AsistenciaInner extends StatefulWidget {
   State<_AsistenciaInner> createState() => _AsistenciaInnerState();
 }
 
-const double _alphaRailW = 24.0; // ancho útil de la barra A–Z
-const double _alphaRailPad = 8.0; // respiro a la izquierda de la barra
-const double _bottomBarSpace =
-    80.0; // espacio que ocupa el botón "Guardar todo"
-
 class _AsistenciaInnerState extends State<_AsistenciaInner> {
   final _searchCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
@@ -86,7 +80,7 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
   // --- índice alfabético ---
   bool _isDraggingAlpha = false;
   String _currentLetter = 'A';
-  double? _alphaIndicatorDy; // posición Y local del dedo sobre el rail
+  String _lastJumpedLetter = '';
   final List<String> _letters = List.generate(
     26,
     (i) => String.fromCharCode(65 + i),
@@ -95,51 +89,50 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
   // Causas / motivos
   static const _causasTJ = [
     'Cita médica',
-    'Transporte/accidente',
     'Trámite oficial',
     'Emergencia familiar',
+    'Transporte/accidente',
     'Representa a la institución',
   ];
   static const _causasFJ = [
-    'Enfermedad (cert.)',
+    'Enfermedad',
     'Luto familiar',
-    'Procedimiento médico',
     'Citación oficial',
     'Contingencia mayor',
+    'Procedimiento médico',
   ];
   static const _motivosInjust = ['Sin justificación'];
 
-  // Estado local: causa/motivo por alumno
   final Map<int, String> _causaPorAlumno = {}; // idEst -> texto o '__otra__'
 
   bool _validarCausas(RegistroAsistenciaViewModel vm) {
     for (final entry in vm.estados.entries) {
       final id = entry.key;
       final est = entry.value;
-      if ((est == 'TJ' || est == 'FJ') && (_causaPorAlumno[id] == null)) {
+      if ((est == 'TJ' || est == 'FJ') && (_causaPorAlumno[id] == null))
         return false;
-      }
     }
     return true;
   }
 
-  void _onAlphaDrag(
-    Offset localPos,
-    double railHeight,
-    List<Estudiante> items,
-  ) {
+  void _handleAlphaDrag({
+    required Offset localPos,
+    required double railHeight,
+    required List<Estudiante> items,
+  }) {
     final cellH = railHeight / _letters.length;
-    int idx = (localPos.dy ~/ cellH);
-    idx = idx.clamp(0, _letters.length - 1);
+    int idx = (localPos.dy ~/ cellH).clamp(0, _letters.length - 1);
     final letter = _letters[idx];
+
+    if (letter != _lastJumpedLetter) {
+      _lastJumpedLetter = letter;
+      _jumpToLetter(letter, items);
+    }
 
     setState(() {
       _isDraggingAlpha = true;
       _currentLetter = letter;
-      _alphaIndicatorDy = localPos.dy.clamp(0, railHeight);
     });
-
-    _jumpToLetter(letter, items); // ya lo tienes implementado
   }
 
   @override
@@ -179,8 +172,8 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
     if (ctx != null) {
       await Scrollable.ensureVisible(
         ctx,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOut,
+        duration: const Duration(milliseconds: 80), // salto más ágil
+        curve: Curves.linear,
         alignment: 0,
       );
     }
@@ -190,21 +183,16 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
   Widget build(BuildContext context) {
     final estudianteVM = Provider.of<EstudianteViewModel>(context);
     final asistenciaVM = Provider.of<RegistroAsistenciaViewModel>(context);
-
     if (estudianteVM.isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final estudiantes = _filter(estudianteVM.estudiantes);
     _buildLetterIndex(estudiantes);
-    final today = DateFormat('EEE, d MMM yyyy', 'es_PE').format(DateTime.now());
 
+    final today = DateFormat('EEE, d MMM yyyy', 'es_PE').format(DateTime.now());
     final base = Theme.of(context);
-    final reservedBottom =
-        16 /*top pad*/ +
-        48 /*btn height*/ +
-        16 /*bottom pad*/ +
-        MediaQuery.of(context).padding.bottom; // safe area real
+
     final localTheme = base.copyWith(
       scaffoldBackgroundColor: Colors.white,
       appBarTheme: base.appBarTheme.copyWith(
@@ -237,15 +225,24 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
       ),
     );
 
+    // Ancho dinámico del rail (24–36 px)
+    final double alphaRailW = (MediaQuery.of(context).size.width * 0.06).clamp(
+      30.0,
+      36.0,
+    );
+
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+
     return Theme(
       data: localTheme,
       child: Scaffold(
         appBar: AppBar(title: const Text('Registrar Asistencia')),
-        // Botón Guardar fijo abajo, como en el mockup
-        bottomNavigationBar: SafeArea(
-          minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+
+        // Botón fijo que respeta gestos/botones
+        bottomNavigationBar: Padding(
+          padding: EdgeInsets.fromLTRB(16, 8, 16, bottomInset + 8),
           child: SizedBox(
-            height: 48,
+            height: 56,
             child: ElevatedButton.icon(
               icon:
                   asistenciaVM.isLoading
@@ -272,7 +269,6 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
                   asistenciaVM.isLoading
                       ? null
                       : () async {
-                        // Validación de causas TJ/FJ que ya agregaste
                         if (!_validarCausas(asistenciaVM)) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -283,13 +279,9 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
                           );
                           return;
                         }
-
                         try {
-                          await asistenciaVM
-                              .registrarTodo(); // muestra "Guardando..." lo que deba
-
+                          await asistenciaVM.registrarTodo();
                           if (!mounted) return;
-                          // ✅ Modal centrado (check verde)
                           await showDialog(
                             context: context,
                             barrierDismissible: false,
@@ -306,7 +298,7 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
                                       Icon(
                                         Icons.check_circle_rounded,
                                         color: Colors.green,
-                                        size: 50.0,
+                                        size: 48,
                                       ),
                                       SizedBox(width: 10),
                                       Expanded(
@@ -338,13 +330,11 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
                                   ],
                                 ),
                           );
-
                           if (!mounted) return;
-                          // ⬅️ Volver al Home (pantalla raíz)
                           Navigator.of(
                             context,
                           ).popUntil((route) => route.isFirst);
-                        } catch (e) {
+                        } catch (_) {
                           if (!mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -356,9 +346,10 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
             ),
           ),
         ),
+
         body: Column(
           children: [
-            // Cabecera: grado/sección + fecha
+            // Cabecera
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: Column(
@@ -372,25 +363,23 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
                         'Grado: ${widget.grado}º • Sección: ${widget.seccionNombre ?? widget.seccion}',
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
-                          fontSize: 16.0,
+                          fontSize: 16,
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 10),
-
                   Row(
                     children: [
                       const Icon(Icons.event, size: 22, color: _primaryDark),
                       const SizedBox(width: 6),
                       Text(
                         today,
-                        style: const TextStyle(color: _muted, fontSize: 16.0),
+                        style: const TextStyle(color: _muted, fontSize: 16),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  // Buscador
                   TextField(
                     controller: _searchCtrl,
                     onChanged: (v) => setState(() => _query = v),
@@ -403,34 +392,28 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
               ),
             ),
             const SizedBox(height: 8),
+
+            // Lista + Barra A–Z
             Expanded(
               child: Stack(
                 children: [
+                  // LISTA
                   ListView.separated(
                     controller: _scrollCtrl,
                     padding: EdgeInsets.fromLTRB(
                       16,
                       8,
-                      16 +
-                          _alphaRailW +
-                          _alphaRailPad, // deja canal para la barra A–Z
-                      reservedBottom, // respeta el área del botón
+                      16 + alphaRailW + 10, // canal para A–Z
+                      24, // margen inferior simétrico (separado del botón)
                     ),
                     itemCount: estudiantes.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, i) {
                       final Estudiante e = estudiantes[i];
                       _itemKeys.putIfAbsent(e.id, () => GlobalKey());
-                      asistenciaVM.estados.putIfAbsent(
-                        e.id,
-                        () => 'A',
-                      ); // default
+                      asistenciaVM.estados.putIfAbsent(e.id, () => 'A');
                       final estado = asistenciaVM.estados[e.id];
-                      _itemKeys.putIfAbsent(e.id, () => GlobalKey());
-                      asistenciaVM.estados.putIfAbsent(
-                        e.id,
-                        () => 'A',
-                      ); // default
+
                       return Container(
                         key: _itemKeys[e.id],
                         child: Card(
@@ -450,62 +433,95 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                const SizedBox(height: 8),
+                                const SizedBox(height: 10),
 
-                                // ====== ESTADO (A/FI/FJ/TI/TJ) ======
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 4,
-                                  children:
-                                      ['A', 'FI', 'FJ', 'TI', 'TJ'].map((s) {
-                                        final selected = estado == s;
-                                        return ChoiceChip(
-                                          label: Text(s),
-                                          selected: selected,
-                                          onSelected: (_) {
-                                            asistenciaVM.actualizarEstado(
-                                              e.id,
-                                              s,
-                                            );
-                                            if (s == 'A') {
-                                              FocusScope.of(context).unfocus();
-                                              asistenciaVM.observaciones.remove(
-                                                e.id,
-                                              ); // limpia obs
-                                              _causaPorAlumno.remove(
-                                                e.id,
-                                              ); // limpia causa
-                                            }
-                                            setState(
-                                              () {},
-                                            ); // refresca UI dependiente
-                                          },
-                                          selectedColor: _primary.withOpacity(
-                                            0.15,
-                                          ),
-                                          labelStyle: TextStyle(
-                                            color:
-                                                selected
-                                                    ? _primaryDark
-                                                    : Colors.black87,
-                                            fontWeight:
-                                                selected
-                                                    ? FontWeight.w600
-                                                    : FontWeight.w400,
-                                          ),
-                                          side: const BorderSide(
-                                            color: _outline,
-                                          ),
-                                        );
-                                      }).toList(),
+                                // Estados en UNA línea con scroll horizontal
+                                SizedBox(
+                                  height: 36,
+                                  child: ScrollConfiguration(
+                                    behavior: const _NoGlowBehavior(),
+                                    child: ListView(
+                                      scrollDirection: Axis.horizontal,
+                                      physics: const BouncingScrollPhysics(
+                                        parent: AlwaysScrollableScrollPhysics(),
+                                      ),
+                                      children:
+                                          [
+                                              _EstadoChip(
+                                                texto: 'A',
+                                                selected: estado == 'A',
+                                                onTap: () {
+                                                  asistenciaVM.actualizarEstado(
+                                                    e.id,
+                                                    'A',
+                                                  );
+                                                  FocusScope.of(
+                                                    context,
+                                                  ).unfocus();
+                                                  asistenciaVM.observaciones
+                                                      .remove(e.id);
+                                                  _causaPorAlumno.remove(e.id);
+                                                  setState(() {});
+                                                },
+                                              ),
+                                              _EstadoChip(
+                                                texto: 'FI',
+                                                selected: estado == 'FI',
+                                                onTap: () {
+                                                  asistenciaVM.actualizarEstado(
+                                                    e.id,
+                                                    'FI',
+                                                  );
+                                                  setState(() {});
+                                                },
+                                              ),
+                                              _EstadoChip(
+                                                texto: 'FJ',
+                                                selected: estado == 'FJ',
+                                                onTap: () {
+                                                  asistenciaVM.actualizarEstado(
+                                                    e.id,
+                                                    'FJ',
+                                                  );
+                                                  setState(() {});
+                                                },
+                                              ),
+                                              _EstadoChip(
+                                                texto: 'TI',
+                                                selected: estado == 'TI',
+                                                onTap: () {
+                                                  asistenciaVM.actualizarEstado(
+                                                    e.id,
+                                                    'TI',
+                                                  );
+                                                  setState(() {});
+                                                },
+                                              ),
+                                              _EstadoChip(
+                                                texto: 'TJ',
+                                                selected: estado == 'TJ',
+                                                onTap: () {
+                                                  asistenciaVM.actualizarEstado(
+                                                    e.id,
+                                                    'TJ',
+                                                  );
+                                                  setState(() {});
+                                                },
+                                              ),
+                                            ].expand((w) sync* {
+                                              yield w;
+                                              yield const SizedBox(width: 8);
+                                            }).toList()
+                                            ..removeLast(),
+                                    ),
+                                  ),
                                 ),
 
-                                // ====== CAUSAS / MOTIVOS según estado ======
-                                const SizedBox(height: 8),
+                                const SizedBox(height: 10),
 
+                                // CAUSAS / MOTIVOS
                                 Builder(
                                   builder: (_) {
-                                    // helper local para dibujar chips de causa/motivo
                                     Widget _buildChips(List<String> opciones) {
                                       return Wrap(
                                         spacing: 8,
@@ -521,7 +537,6 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
                                                 setState(() {
                                                   _causaPorAlumno[e.id] = op;
                                                 });
-                                                // Si quieres que la causa quede también en observaciones:
                                                 asistenciaVM.observaciones[e
                                                         .id] =
                                                     op;
@@ -554,7 +569,6 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
                                                     _causaPorAlumno[e.id] =
                                                         '__otra__',
                                               );
-                                              // No tocamos observaciones; el usuario la escribe
                                             },
                                             selectedColor: _primary.withOpacity(
                                               0.10,
@@ -567,36 +581,31 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
                                       );
                                     }
 
-                                    if (estado == 'TJ') {
+                                    if (estado == 'TJ')
                                       return _buildChips(_causasTJ);
-                                    } else if (estado == 'FJ') {
+                                    if (estado == 'FJ')
                                       return _buildChips(_causasFJ);
-                                    } else if (estado == 'TI' ||
-                                        estado == 'FI') {
+                                    if (estado == 'TI' || estado == 'FI')
                                       return _buildChips(_motivosInjust);
-                                    }
                                     return const SizedBox.shrink();
                                   },
                                 ),
 
                                 const SizedBox(height: 10),
 
-                                // ====== OBSERVACIÓN: regla de visibilidad ======
+                                // Observación
                                 AnimatedSwitcher(
                                   duration: const Duration(milliseconds: 150),
                                   switchInCurve: Curves.easeOut,
                                   switchOutCurve: Curves.easeIn,
                                   child: () {
-                                    // muestra obs si NO es A y:
-                                    // - TJ/FJ -> solo cuando eligió "Otra…"
-                                    // - TI/FI -> siempre opcional
                                     final causa = _causaPorAlumno[e.id];
+                                    final est = asistenciaVM.estados[e.id];
                                     final showObs =
-                                        estado != 'A' &&
-                                        ((estado == 'TJ' || estado == 'FJ')
+                                        est != 'A' &&
+                                        ((est == 'TJ' || est == 'FJ')
                                             ? causa == '__otra__'
                                             : true);
-
                                     if (!showObs) {
                                       return const SizedBox.shrink(
                                         key: ValueKey('hidden'),
@@ -622,42 +631,46 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
                     },
                   ),
 
-                  // Barra alfabética a la derecha (A–Z)
+                  // Barra A–Z a la derecha (full height) con línea divisoria
                   Positioned(
                     right: 0,
                     top: 0,
-                    bottom: reservedBottom - 10, // se detiene antes del botón
+                    bottom: 0,
                     child: SizedBox(
-                      width: _alphaRailW + _alphaRailPad,
+                      width: alphaRailW,
                       child: LayoutBuilder(
                         builder: (ctx, cons) {
                           final railH = cons.maxHeight;
                           final cellH = railH / _letters.length;
-                          final fontSize = (cellH * 0.75).clamp(10.0, 14.0);
+                          final fontSize = (cellH * 0.75).clamp(11.0, 16.0);
 
                           return GestureDetector(
-                            behavior:
-                                HitTestBehavior
-                                    .opaque, // captura todo el dedo en el rail
+                            behavior: HitTestBehavior.opaque,
                             onPanDown:
-                                (d) => _onAlphaDrag(
-                                  d.localPosition,
-                                  railH,
-                                  estudiantes,
+                                (d) => _handleAlphaDrag(
+                                  localPos: d.localPosition,
+                                  railHeight: railH,
+                                  items: estudiantes,
                                 ),
                             onPanUpdate:
-                                (d) => _onAlphaDrag(
-                                  d.localPosition,
-                                  railH,
-                                  estudiantes,
+                                (d) => _handleAlphaDrag(
+                                  localPos: d.localPosition,
+                                  railHeight: railH,
+                                  items: estudiantes,
                                 ),
                             onPanEnd:
-                                (_) => setState(() => _isDraggingAlpha = false),
+                                (_) => setState(() {
+                                  _isDraggingAlpha = false;
+                                  _lastJumpedLetter = '';
+                                }),
                             onPanCancel:
-                                () => setState(() => _isDraggingAlpha = false),
+                                () => setState(() {
+                                  _isDraggingAlpha = false;
+                                  _lastJumpedLetter = '';
+                                }),
                             child: Stack(
                               children: [
-                                // Línea guía
+                                // línea divisoria
                                 Align(
                                   alignment: Alignment.centerLeft,
                                   child: Container(
@@ -668,58 +681,80 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
                                     color: _outline,
                                   ),
                                 ),
-
-                                // Letras A–Z distribuidas (rail fijo, no se mueve)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 0,
-                                  ),
-                                  child: Column(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children:
-                                        _letters.map((letter) {
-                                          final active = _letterIndex
-                                              .containsKey(letter);
-                                          return SizedBox(
-                                            height: cellH,
-                                            child: Align(
-                                              alignment: Alignment.center,
-                                              child: Text(
-                                                letter,
-                                                style: TextStyle(
-                                                  fontSize: fontSize,
-                                                  color:
-                                                      active
-                                                          ? _primaryDark
-                                                          : _muted.withOpacity(
-                                                            0.35,
-                                                          ),
-                                                  fontWeight:
-                                                      active
-                                                          ? FontWeight.w700
-                                                          : FontWeight.w400,
-                                                ),
+                                // letras
+                                Column(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children:
+                                      _letters.map((letter) {
+                                        final active = _letterIndex.containsKey(
+                                          letter,
+                                        );
+                                        return SizedBox(
+                                          height: cellH,
+                                          child: Center(
+                                            child: Text(
+                                              letter,
+                                              style: TextStyle(
+                                                fontSize: fontSize,
+                                                color: (active
+                                                        ? _primaryDark
+                                                        : _muted.withOpacity(
+                                                          0.35,
+                                                        ))
+                                                    .withOpacity(
+                                                      0.55,
+                                                    ), // un poco transparente
+                                                fontWeight:
+                                                    active
+                                                        ? FontWeight.w700
+                                                        : FontWeight.w500,
                                               ),
                                             ),
-                                          );
-                                        }).toList(),
-                                  ),
+                                          ),
+                                        );
+                                      }).toList(),
                                 ),
-
-                                // Pestañita con la letra actual (aparece mientras arrastras)
-                                if (_isDraggingAlpha)
-                                  Positioned(
-                                    right: _alphaRailW + 8,
-                                    top: ((_alphaIndicatorDy ?? railH / 2) - 22)
-                                        .clamp(0.0, railH - 44),
-                                    child: _AlphaBubble(letter: _currentLetter),
-                                  ),
                               ],
                             ),
                           );
                         },
+                      ),
+                    ),
+                  ),
+
+                  // Indicador flotante centrado (ligeramente transparente)
+                  IgnorePointer(
+                    ignoring: true,
+                    child: AnimatedOpacity(
+                      opacity: _isDraggingAlpha ? 1 : 0,
+                      duration: const Duration(milliseconds: 100),
+                      child: Center(
+                        child: Container(
+                          width: 112,
+                          height: 112,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.92),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: _outline.withOpacity(0.9),
+                            ),
+                            boxShadow: const [
+                              BoxShadow(blurRadius: 12, color: Colors.black12),
+                            ],
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            _currentLetter,
+                            style: TextStyle(
+                              fontSize: 64,
+                              fontWeight: FontWeight.w800,
+                              color: _primaryDark.withOpacity(
+                                0.75,
+                              ), // un poco transparente
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -733,31 +768,45 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
   }
 }
 
-class _AlphaBubble extends StatelessWidget {
-  const _AlphaBubble({required this.letter});
-  final String letter;
+// ---- Widgets auxiliares ----
+
+class _EstadoChip extends StatelessWidget {
+  const _EstadoChip({
+    required this.texto,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String texto;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _outline),
-          boxShadow: const [BoxShadow(blurRadius: 8, color: Colors.black12)],
-        ),
-        child: Text(
-          letter,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-            color: _primaryDark,
-          ),
-        ),
+    return ChoiceChip(
+      label: Text(texto),
+      selected: selected,
+      onSelected: (_) => onTap(),
+      selectedColor: _primary.withOpacity(0.15),
+      labelStyle: TextStyle(
+        color: selected ? _primaryDark : Colors.black87,
+        fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
       ),
+      side: const BorderSide(color: _outline),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
+  }
+}
+
+/// Sin glow ni overscroll agresivo
+class _NoGlowBehavior extends ScrollBehavior {
+  const _NoGlowBehavior();
+  @override
+  Widget buildOverscrollIndicator(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
+    return child;
   }
 }
