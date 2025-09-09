@@ -453,6 +453,7 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
 
                                 SizedBox(
                                   height: 36,
+                                  width: 320,
                                   child: ScrollConfiguration(
                                     behavior: const _NoGlowBehavior(),
                                     child: ListView(

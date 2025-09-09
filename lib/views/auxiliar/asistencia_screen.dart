@@ -438,6 +438,7 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
                                 // Estados en UNA línea con scroll horizontal
                                 SizedBox(
                                   height: 36,
+                                  width: 320,
                                   child: ScrollConfiguration(
                                     behavior: const _NoGlowBehavior(),
                                     child: ListView(
