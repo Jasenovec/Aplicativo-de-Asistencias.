@@ -145,12 +145,41 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
 
   void _prefillIfNeeded(List<Asistencia> list) {
     if (_prefilled) return;
+
     for (final a in list) {
-      _estadoEditado[a.idAsistencia] = a.estadoAsistencia;
-      if (a.observacion != null && a.observacion!.trim().isNotEmpty) {
-        _observacionEditada[a.idAsistencia] = a.observacion!.trim();
+      final id = a.idAsistencia;
+      final estado = a.estadoAsistencia;
+      final obs = (a.observacion ?? '').trim();
+
+      _estadoEditado[id] = estado;
+
+      if (obs.isNotEmpty) {
+        _observacionEditada[id] = obs;
+
+        List<String>? posibles;
+        if (estado == 'TJ') {
+          posibles = _causasTJ;
+        } else if (estado == 'FJ')
+          // ignore: curly_braces_in_flow_control_structures
+          posibles = _causasFJ;
+        else if (estado == 'TI' || estado == 'FI')
+          // ignore: curly_braces_in_flow_control_structures
+          posibles = _motivosInjust;
+
+        if (posibles != null) {
+          final match = posibles.firstWhere(
+            (c) => obs.startsWith(c),
+            orElse: () => '',
+          );
+          if (match.isNotEmpty) {
+            _causaPorRegistro[id] = match;
+          } else {
+            _causaPorRegistro[id] = '__otra__';
+          }
+        }
       }
     }
+
     _prefilled = true;
   }
 
@@ -493,6 +522,17 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
                                     if (opciones == null)
                                       return const SizedBox.shrink();
 
+                                    // Detectar causa si aún no fue registrada
+                                    if (!_causaPorRegistro.containsKey(id) &&
+                                        obsActual.isNotEmpty) {
+                                      final match = opciones.firstWhere(
+                                        (c) => obsActual.startsWith(c),
+                                        orElse: () => '',
+                                      );
+                                      _causaPorRegistro[id] =
+                                          match.isNotEmpty ? match : '__otra__';
+                                    }
+
                                     return Wrap(
                                       spacing: 8,
                                       runSpacing: 8,
@@ -536,6 +576,15 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
                                             setState(() {
                                               _causaPorRegistro[id] =
                                                   '__otra__';
+                                              if (_observacionEditada[id] ==
+                                                      null ||
+                                                  opciones!.any(
+                                                    (c) =>
+                                                        _observacionEditada[id] ==
+                                                        c,
+                                                  )) {
+                                                _observacionEditada[id] = '';
+                                              }
                                             });
                                           },
                                           selectedColor: _primary.withOpacity(
@@ -563,22 +612,53 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
                                         ((estado == 'TJ' || estado == 'FJ')
                                             ? causa == '__otra__'
                                             : true);
-                                    if (!showObs)
+
+                                    if (!showObs) {
                                       return const SizedBox.shrink(
                                         key: ValueKey('hidden'),
                                       );
+                                    }
+
+                                    final controller = TextEditingController(
+                                      text: obsActual,
+                                    );
+                                    controller
+                                        .selection = TextSelection.fromPosition(
+                                      TextPosition(
+                                        offset: controller.text.length,
+                                      ),
+                                    );
 
                                     return TextField(
                                       key: const ValueKey('obs'),
-                                      controller: TextEditingController(
-                                        text: obsActual,
-                                      ),
+                                      controller: controller,
                                       decoration: const InputDecoration(
                                         labelText: 'Observación',
                                       ),
-                                      onChanged:
-                                          (txt) =>
-                                              _observacionEditada[id] = txt,
+                                      onChanged: (txt) {
+                                        _observacionEditada[id] = txt;
+
+                                        // Si estamos en TJ o FJ y texto coincide con alguna causa, lo marcamos automáticamente
+                                        if (estado == 'TJ' || estado == 'FJ') {
+                                          final posibles =
+                                              estado == 'TJ'
+                                                  ? _causasTJ
+                                                  : _causasFJ;
+                                          final match = posibles.firstWhere(
+                                            (c) => txt.startsWith(c),
+                                            orElse: () => '',
+                                          );
+                                          if (match.isNotEmpty) {
+                                            _causaPorRegistro[id] = match;
+                                          } else {
+                                            _causaPorRegistro[id] = '__otra__';
+                                          }
+                                        } else if (estado == 'TI' ||
+                                            estado == 'FI') {
+                                          _causaPorRegistro[id] =
+                                              '__otra__'; // TI/FI solo tienen "sin justificación"
+                                        }
+                                      },
                                     );
                                   }(),
                                 ),
