@@ -13,7 +13,6 @@ class AuthViewModel extends ChangeNotifier {
   AuthUser? _user;
 
   AuthViewModel(this._storage, this._service) {
-    // Interceptor global (una sola vez)
     ApiConfig.attachAuthInterceptor(
       getToken: () async => _token ?? await _storage.read(),
       onUnauthorized: logout,
@@ -48,7 +47,6 @@ class AuthViewModel extends ChangeNotifier {
     try {
       _user = await _service.me();
     } catch (_) {
-      // si falla /me igual continuamos con lo del login
       _user = session.user;
     }
     notifyListeners();

@@ -5,10 +5,10 @@ import 'package:intl/intl.dart';
 import '../../viewmodels/asistencia_viewmodel.dart';
 import '../../models/asistencia.dart';
 
-const _primary = Color(0xFF1E88E5); // Azul 600
-const _primaryDark = Color(0xFF1976D2); // Azul 700
-const _outline = Color(0xFFE5E7EB); // Gris 200
-const _muted = Color(0xFF6B7280); // Gris 500
+const _primary = Color(0xFF1E88E5);
+const _primaryDark = Color(0xFF1976D2);
+const _outline = Color(0xFFE5E7EB);
+const _muted = Color(0xFF6B7280);
 
 class AsistenciaListScreen extends StatefulWidget {
   final int grado;
@@ -639,7 +639,6 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
                                       onChanged: (txt) {
                                         _observacionEditada[id] = txt;
 
-                                        // Si estamos en TJ o FJ y texto coincide con alguna causa, lo marcamos automáticamente
                                         if (estado == 'TJ' || estado == 'FJ') {
                                           final posibles =
                                               estado == 'TJ'
@@ -656,8 +655,7 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
                                           }
                                         } else if (estado == 'TI' ||
                                             estado == 'FI') {
-                                          _causaPorRegistro[id] =
-                                              '__otra__'; // TI/FI solo tienen "sin justificación"
+                                          _causaPorRegistro[id] = '__otra__';
                                         }
                                       },
                                     );
@@ -758,7 +756,6 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
                     ),
                   ),
 
-                  // Indicador flotante centrado (ligeramente transparente)
                   IgnorePointer(
                     ignoring: true,
                     child: AnimatedOpacity(
@@ -784,9 +781,7 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
                             style: TextStyle(
                               fontSize: 64,
                               fontWeight: FontWeight.w800,
-                              color: _primaryDark.withOpacity(
-                                0.75,
-                              ), // un poco transparente
+                              color: _primaryDark.withOpacity(0.75),
                             ),
                           ),
                         ),
@@ -803,7 +798,6 @@ class _AsistenciaListScreenState extends State<AsistenciaListScreen> {
   }
 }
 
-/// Sin glow ni overscroll agresivo
 class _NoGlowBehavior extends ScrollBehavior {
   const _NoGlowBehavior();
   @override

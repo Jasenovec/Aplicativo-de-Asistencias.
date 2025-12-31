@@ -10,10 +10,6 @@ class ApiConfig {
     ),
   );
 
-  // IP vm 34.123.32.110
-  // IP solmar: 192.168.137.1
-  // IP de mi casa: 192.168.0.192
-
   static bool _attached = false;
 
   static void attachAuthInterceptor({

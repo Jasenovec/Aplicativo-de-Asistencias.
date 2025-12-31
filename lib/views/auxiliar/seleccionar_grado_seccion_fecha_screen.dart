@@ -214,7 +214,6 @@ class _SeleccionarGradoSeccionFechaScreenState
       return;
     }
 
-    // No más antiguas que el rango permitido
     if (dSel.isBefore(minDay)) {
       mostrarError(
         'Solo puede modificar asistencias de los últimos $kDiasModificables días.',
@@ -422,7 +421,6 @@ class _SeleccionarGradoSeccionFechaScreenState
                         ),
                         const SizedBox(height: 16),
 
-                        // Grado
                         cargandoGrados
                             ? const Center(
                               child: CircularProgressIndicator(color: _primary),
@@ -454,7 +452,6 @@ class _SeleccionarGradoSeccionFechaScreenState
 
                         const SizedBox(height: 16),
 
-                        // Sección
                         cargandoSecciones
                             ? const Center(
                               child: CircularProgressIndicator(color: _primary),
@@ -482,7 +479,6 @@ class _SeleccionarGradoSeccionFechaScreenState
 
                         const SizedBox(height: 16),
 
-                        // Calendario con ventana de días (sin fines de semana ni feriados)
                         Card(
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
@@ -529,7 +525,6 @@ class _SeleccionarGradoSeccionFechaScreenState
                                   return minDay;
                                 return fd;
                               }(),
-                              // 👇 Habilita solo días hábiles dentro del rango
                               enabledDayPredicate: (day) {
                                 final d = DateTime(
                                   day.year,
@@ -613,7 +608,6 @@ class _SeleccionarGradoSeccionFechaScreenState
 
                         const SizedBox(height: 10),
 
-                        // Campo de fecha (solo visual)
                         TextFormField(
                           readOnly: true,
                           controller: TextEditingController(
@@ -630,7 +624,6 @@ class _SeleccionarGradoSeccionFechaScreenState
 
                         const SizedBox(height: 16),
 
-                        // Botón Buscar
                         Align(
                           alignment: Alignment.center,
                           child: ConstrainedBox(

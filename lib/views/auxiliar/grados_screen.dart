@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/grados_viewmodel.dart';
 
-/// Pantalla para mostrar los grados del sistema
-/// Utiliza el ViewModel GradosViewModel para obtener los datos
 class GradosScreen extends StatelessWidget {
   const GradosScreen({super.key});
 

@@ -1,4 +1,3 @@
-// lib/screens/home_screen.dart
 import 'dart:async';
 import 'package:asistencia_app/utils/calendar_rules.dart';
 import 'package:flutter/material.dart';
@@ -159,7 +158,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     // Menú
                     _MenuCard(
                       icon: Icons.playlist_add_check,
-                      label: "Registrar Asistencia",
+                      label: "asistencia",
                       color: Colors.greenAccent,
                       enabled: !disabled,
                       onTap:
@@ -198,7 +197,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
             ),
           ),
-          // Botón rojo /home
           SafeArea(
             child: Align(
               alignment: Alignment.topLeft,

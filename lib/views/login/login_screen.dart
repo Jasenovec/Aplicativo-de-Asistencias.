@@ -204,7 +204,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final ok = await context.read<AuthViewModel>().login(usuario, password);
       if (!mounted) return;
       if (ok) {
-        Navigator.pushReplacementNamed(context, '/'); // Home
+        Navigator.pushReplacementNamed(context, '/');
       }
     } on DioException catch (e) {
       final sc = e.response?.statusCode;

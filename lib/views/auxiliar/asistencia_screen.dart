@@ -6,10 +6,10 @@ import '../../viewmodels/estudiante_viewmodel.dart';
 import '../../viewmodels/registro_asistencia_viewmodel.dart';
 import '../../models/estudiante.dart';
 
-const _primary = Color(0xFF1E88E5); // Azul 600
-const _primaryDark = Color(0xFF1976D2); // Azul 700
-const _outline = Color(0xFFE5E7EB); // Gris 200
-const _muted = Color(0xFF6B7280); // Gris 500
+const _primary = Color(0xFF1E88E5);
+const _primaryDark = Color(0xFF1976D2);
+const _outline = Color(0xFFE5E7EB);
+const _muted = Color(0xFF6B7280);
 
 class AsistenciaScreen extends StatelessWidget {
   const AsistenciaScreen({
@@ -75,9 +75,8 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
 
   String _query = '';
   final Map<int, GlobalKey> _itemKeys = {};
-  Map<String, int> _letterIndex = {}; // letra -> índice en la lista filtrada
+  Map<String, int> _letterIndex = {};
 
-  // --- índice alfabético ---
   bool _isDraggingAlpha = false;
   String _currentLetter = 'A';
   String _lastJumpedLetter = '';
@@ -86,7 +85,6 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
     (i) => String.fromCharCode(65 + i),
   );
 
-  // Causas / motivos
   static const _causasTJ = [
     'Cita médica',
     'Trámite oficial',
@@ -103,7 +101,7 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
   ];
   static const _motivosInjust = ['Sin justificación'];
 
-  final Map<int, String> _causaPorAlumno = {}; // idEst -> texto o '__otra__'
+  final Map<int, String> _causaPorAlumno = {};
 
   bool _validarCausas(RegistroAsistenciaViewModel vm) {
     for (final entry in vm.estados.entries) {
@@ -172,7 +170,7 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
     if (ctx != null) {
       await Scrollable.ensureVisible(
         ctx,
-        duration: const Duration(milliseconds: 80), // salto más ágil
+        duration: const Duration(milliseconds: 80),
         curve: Curves.linear,
         alignment: 0,
       );
@@ -225,7 +223,6 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
       ),
     );
 
-    // Ancho dinámico del rail (24–36 px)
     final double alphaRailW = (MediaQuery.of(context).size.width * 0.06).clamp(
       30.0,
       36.0,
@@ -236,9 +233,8 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
     return Theme(
       data: localTheme,
       child: Scaffold(
-        appBar: AppBar(title: const Text('Registrar Asistencia')),
+        appBar: AppBar(title: const Text('Registrar asistencia')),
 
-        // Botón fijo que respeta gestos/botones
         bottomNavigationBar: Padding(
           padding: EdgeInsets.fromLTRB(16, 8, 16, bottomInset + 8),
           child: SizedBox(
@@ -349,7 +345,6 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
 
         body: Column(
           children: [
-            // Cabecera
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: Column(
@@ -393,18 +388,16 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
             ),
             const SizedBox(height: 8),
 
-            // Lista + Barra A–Z
             Expanded(
               child: Stack(
                 children: [
-                  // LISTA
                   ListView.separated(
                     controller: _scrollCtrl,
                     padding: EdgeInsets.fromLTRB(
                       16,
                       8,
-                      16 + alphaRailW + 10, // canal para A–Z
-                      24, // margen inferior simétrico (separado del botón)
+                      16 + alphaRailW + 10,
+                      24,
                     ),
                     itemCount: estudiantes.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
@@ -435,7 +428,6 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
                                 ),
                                 const SizedBox(height: 10),
 
-                                // Estados en UNA línea con scroll horizontal
                                 SizedBox(
                                   height: 36,
                                   width: 320,
@@ -520,7 +512,6 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
 
                                 const SizedBox(height: 10),
 
-                                // CAUSAS / MOTIVOS
                                 Builder(
                                   builder: (_) {
                                     Widget _buildChips(List<String> opciones) {
@@ -594,7 +585,6 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
 
                                 const SizedBox(height: 10),
 
-                                // Observación
                                 AnimatedSwitcher(
                                   duration: const Duration(milliseconds: 150),
                                   switchInCurve: Curves.easeOut,
@@ -632,7 +622,6 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
                     },
                   ),
 
-                  // Barra A–Z a la derecha (full height) con línea divisoria
                   Positioned(
                     right: 0,
                     top: 0,
@@ -671,7 +660,6 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
                                 }),
                             child: Stack(
                               children: [
-                                // línea divisoria
                                 Align(
                                   alignment: Alignment.centerLeft,
                                   child: Container(
@@ -682,7 +670,6 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
                                     color: _outline,
                                   ),
                                 ),
-                                // letras
                                 Column(
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
@@ -703,9 +690,7 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
                                                         : _muted.withOpacity(
                                                           0.35,
                                                         ))
-                                                    .withOpacity(
-                                                      0.55,
-                                                    ), // un poco transparente
+                                                    .withOpacity(0.55),
                                                 fontWeight:
                                                     active
                                                         ? FontWeight.w700
@@ -724,7 +709,6 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
                     ),
                   ),
 
-                  // Indicador flotante centrado (ligeramente transparente)
                   IgnorePointer(
                     ignoring: true,
                     child: AnimatedOpacity(
@@ -750,9 +734,7 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
                             style: TextStyle(
                               fontSize: 64,
                               fontWeight: FontWeight.w800,
-                              color: _primaryDark.withOpacity(
-                                0.75,
-                              ), // un poco transparente
+                              color: _primaryDark.withOpacity(0.75),
                             ),
                           ),
                         ),
@@ -768,8 +750,6 @@ class _AsistenciaInnerState extends State<_AsistenciaInner> {
     );
   }
 }
-
-// ---- Widgets auxiliares ----
 
 class _EstadoChip extends StatelessWidget {
   const _EstadoChip({
@@ -799,7 +779,6 @@ class _EstadoChip extends StatelessWidget {
   }
 }
 
-/// Sin glow ni overscroll agresivo
 class _NoGlowBehavior extends ScrollBehavior {
   const _NoGlowBehavior();
   @override

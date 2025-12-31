@@ -3,7 +3,6 @@ import 'app_colors.dart';
 
 class AppTheme {
   static ThemeData light() {
-    // Es más robusto construir el esquema desde una seed y luego ajustar.
     final baseScheme = ColorScheme.fromSeed(
       seedColor: AppColors.primary,
       brightness: Brightness.light,
@@ -17,7 +16,7 @@ class AppTheme {
       surface: AppColors.surface,
       onSurface: Colors.black87,
       background: AppColors.background,
-      onBackground: Colors.black87, // (warning deprecado opcional)
+      onBackground: Colors.black87,
       error: AppColors.danger,
       onError: Colors.white,
       outline: AppColors.outline,

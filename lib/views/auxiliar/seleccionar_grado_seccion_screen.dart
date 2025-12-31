@@ -6,10 +6,10 @@ import 'asistencia_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:asistencia_app/services/asistencia_service.dart';
 
-const _primary = Color(0xFF1E88E5); // Azul 600
-const _primaryDark = Color(0xFF1976D2); // aZUL 700
-const _outline = Color(0xFFE5E7EB); // Gris 200
-const _muted = Color(0xFF6B7280); // Gris 500
+const _primary = Color(0xFF1E88E5);
+const _primaryDark = Color(0xFF1976D2);
+const _outline = Color(0xFFE5E7EB);
+const _muted = Color(0xFF6B7280);
 
 class SeleccionarGradoSeccionScreen extends StatefulWidget {
   const SeleccionarGradoSeccionScreen({super.key});
@@ -146,7 +146,7 @@ class _SeleccionarGradoSeccionScreenState
               elevation: 8,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
-                side: const BorderSide(color: Color(0xFFF3F4F6)), // Gris 100
+                side: const BorderSide(color: Color(0xFFF3F4F6)),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(20),
@@ -193,7 +193,6 @@ class _SeleccionarGradoSeccionScreenState
 
                     const SizedBox(height: 16),
 
-                    // Sección
                     cargandoSecciones
                         ? const Center(
                           child: CircularProgressIndicator(color: _primary),
@@ -220,7 +219,6 @@ class _SeleccionarGradoSeccionScreenState
 
                     const SizedBox(height: 22),
 
-                    // Botón Buscar centrado
                     Align(
                       alignment: Alignment.center,
                       child: ConstrainedBox(
@@ -236,7 +234,6 @@ class _SeleccionarGradoSeccionScreenState
                                       (s) => s.idSeccion == seccionSeleccionada,
                                     );
 
-                                    //Chequeo de “ya registrado hoy”
                                     final hoy = DateFormat(
                                       'yyyy-MM-dd',
                                     ).format(DateTime.now());
@@ -249,7 +246,6 @@ class _SeleccionarGradoSeccionScreenState
                                           );
 
                                       if (registros.isNotEmpty) {
-                                        //Aviso centrado (exclamación roja)
                                         await showDialog(
                                           context: context,
                                           barrierDismissible: true,
@@ -312,13 +308,10 @@ class _SeleccionarGradoSeccionScreenState
                                                 ],
                                               ),
                                         );
-                                        return; //no navegamos
+                                        return;
                                       }
-                                    } catch (_) {
-                                      // si el check falla por red, igual permitimos continuar
-                                    }
+                                    } catch (_) {}
 
-                                    //No hay registros: navega normal
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(

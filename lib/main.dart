@@ -55,13 +55,8 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         title: 'Asistencia Escolar',
 
-        // 👇👇 AQUI VA EL THEME
-        theme: AppTheme.light(), // <- usa tu ThemeData global
-        // (opcional) si luego haces un dark:
-        // darkTheme: AppTheme.dark(),
-        // themeMode: ThemeMode.light,
+        theme: AppTheme.light(),
 
-        // 👇 recomendado porque usas NavigationService en el interceptor
         navigatorKey: NavigationService.navigatorKey,
 
         initialRoute: '/splash',
@@ -77,19 +72,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
-
-
-
-  // @override
-  // Widget build(BuildContext context) {
-  //   return ChangeNotifierProvider(
-  //     create: (_) => AsistenciaViewModel(estudianteVM: null),
-  //     child: MaterialApp(
-  //       debugShowCheckedModeBanner: false,
-  //       title: 'Asistencia Escolar',
-  //       initialRoute: '/',
-  //       routes: {'/': (context) => const HomeScreen()},
-  //     ),
-  //   );
-  // }
