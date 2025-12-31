@@ -19,6 +19,7 @@ Este cliente se integra con un **backend REST en Express + MySQL**, con autentic
 - [Calidad de código](#calidad-de-código)
 - [Roadmap](#roadmap)
 - [Licencia](#licencia)
+- [Créditos](#creditos)
 
 ---
 
@@ -35,7 +36,7 @@ Funcionalidades principales del cliente:
 - **Autenticación (login)** y persistencia segura de sesión mediante token.
 - **Selección de contexto**: grado, sección y fecha.
 - **Listado de estudiantes** por grado/sección.
-- **Registro y actualización** de asistencia (estados como `A`, `FI`, `FJ`, `TI`; el catálogo final depende del backend).
+- **Registro y actualización** de asistencia (estados como `A`, `FI`, `FJ`, `TI` y `TJ`).
 - **Consulta de asistencias** (listados/historial según endpoints disponibles).
 - **Validación de calendario** para evitar registros en días **no laborables** (fin de semana y feriados).
 
@@ -243,6 +244,8 @@ Mejoras sugeridas:
 Este proyecto se distribuye bajo la licencia **MIT**.  
 Consulta el archivo [`LICENSE`](LICENSE) para más detalles.
 
-## Créditos / Contexto académico:
+---
+
+## Créditos / Contexto académico
 Proyecto desarrollado como parte del trabajo de grado/bachiller, orientado a un flujo realista de control
 de asistencias escolar con separación cliente–servidor e implementación de control de acceso por rol.
