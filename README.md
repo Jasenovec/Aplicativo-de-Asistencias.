@@ -246,6 +246,6 @@ Consulta el archivo [`LICENSE`](LICENSE) para más detalles.
 
 ---
 
-## Créditos / Contexto académico
+## Créditos
 Proyecto desarrollado como parte del trabajo de grado/bachiller, orientado a un flujo realista de control
 de asistencias escolar con separación cliente–servidor e implementación de control de acceso por rol.
