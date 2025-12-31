@@ -19,7 +19,7 @@ Este cliente se integra con un **backend REST en Express + MySQL**, con autentic
 - [Calidad de código](#calidad-de-código)
 - [Roadmap](#roadmap)
 - [Licencia](#licencia)
-- [Créditos](#creditos)
+- [Créditos](#créditos)
 
 ---
 
